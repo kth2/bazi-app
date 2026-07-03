@@ -56,6 +56,35 @@ class ScopedAnalysis {
       );
 }
 
+/// Answer to a free-form user question about the chart.
+class CustomAnswer {
+  final String question;
+  final String scope;
+  final String answer;
+  final String patternSummary;
+
+  const CustomAnswer({
+    required this.question,
+    required this.scope,
+    required this.answer,
+    required this.patternSummary,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'question': question,
+        'scope': scope,
+        'answer': answer,
+        'patternSummary': patternSummary,
+      };
+
+  factory CustomAnswer.fromJson(Map<String, dynamic> json) => CustomAnswer(
+        question: json['question'] as String,
+        scope: json['scope'] as String,
+        answer: json['answer'] as String,
+        patternSummary: json['patternSummary'] as String? ?? '',
+      );
+}
+
 /// Orchestrates: rule scoring → pattern detection → example matching →
 /// AI call → section parsing, with local caching to protect free-tier quota.
 class BaziAnalysisService {
@@ -77,6 +106,57 @@ class BaziAnalysisService {
   Future<ScopedAnalysis> analyzeLiuNian(ChartResult chart, List<Rule> rules,
           DecadeData decade, FlowYearData year) =>
       _analyze(chart, rules, decade: decade, year: year);
+
+  /// Free-form question answered against the chart + optional 大运/流年 scope.
+  /// Cached per (chart + scope + question) so re-asking is free.
+  Future<CustomAnswer> askQuestion(
+    ChartResult chart,
+    List<Rule> rules,
+    String question, {
+    DecadeData? decade,
+    FlowYearData? year,
+  }) async {
+    final scope = year != null
+        ? '流年 ${year.year} ${year.ganZhi}'
+        : decade != null
+            ? '大运 ${decade.ganZhi}（${decade.startAge}-${decade.endAge}岁）'
+            : '整体命局';
+
+    final normalizedQ = question.trim();
+    final cacheKey = 'ai_qa_${chart.baziString}_${chart.input.gender.name}_'
+        '${scope}_${normalizedQ.hashCode}';
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString(cacheKey);
+    if (cached != null) {
+      return CustomAnswer.fromJson(jsonDecode(cached) as Map<String, dynamic>);
+    }
+
+    final pattern = PatternDetector.detect(chart);
+    final ruleMatches = RuleEngine.evaluate(chart, rules);
+    final similar = await examples.findSimilar(pattern.tags);
+
+    final prompt = AnalysisPrompt.buildCustom(
+      chart: chart,
+      pattern: pattern,
+      ruleMatches: ruleMatches,
+      examples: similar,
+      question: normalizedQ,
+      decade: decade,
+      year: year,
+    );
+
+    final settings = await AiSettings.load();
+    final response = await ai.complete(prompt, settings);
+
+    final result = CustomAnswer(
+      question: normalizedQ,
+      scope: scope,
+      answer: response.trim(),
+      patternSummary: pattern.summary,
+    );
+    await prefs.setString(cacheKey, jsonEncode(result.toJson()));
+    return result;
+  }
 
   Future<ScopedAnalysis> _analyze(
     ChartResult chart,
@@ -168,11 +248,15 @@ class BaziAnalysisService {
     );
   }
 
-  /// Clears cached AI results (e.g. after re-analysis request).
+  /// Clears cached AI results (4-category analyses and Q&A) for this chart.
   static Future<void> clearCacheFor(ChartResult chart) async {
     final prefs = await SharedPreferences.getInstance();
-    final prefix = 'ai_cache_${chart.baziString}_';
-    for (final k in prefs.getKeys().where((k) => k.startsWith(prefix)).toList()) {
+    final bazi = chart.baziString;
+    final prefixes = ['ai_cache_${bazi}_', 'ai_qa_${bazi}_'];
+    for (final k in prefs
+        .getKeys()
+        .where((k) => prefixes.any(k.startsWith))
+        .toList()) {
       await prefs.remove(k);
     }
   }

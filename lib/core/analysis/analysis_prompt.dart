@@ -31,7 +31,80 @@ class AnalysisPrompt {
     FlowYearData? year,
   }) {
     final buf = StringBuffer();
+    _writeContext(buf,
+        chart: chart,
+        pattern: pattern,
+        ruleMatches: ruleMatches,
+        examples: examples,
+        decade: decade,
+        year: year);
 
+    buf.writeln();
+    buf.writeln('按以下4个类别提供详细分析（使用古典原理，指出用神/忌神/格局变化，');
+    buf.writeln('每类预测1-2个可能事件并给出触发依据，如某支被引动、某干争合）：');
+    buf.writeln('1. 事业财富');
+    buf.writeln('2. 婚姻感情');
+    buf.writeln('3. 学习/发展');
+    buf.writeln('4. 健康分析');
+    buf.writeln();
+    buf.writeln('要求：');
+    buf.writeln('- 语言自然、专业，像真实命理师批八字一样，风格贴近上方案例');
+    buf.writeln('- 先讲原局格局如何被此运/此年影响（成格增益或破格受损），再落到具体人事');
+    buf.writeln('- 若命局有特殊场景（如印绶被财破、伤官见官、比劫合官），必须点明并');
+    buf.writeln('  参照案例中同类格局的处理方式给出细腻论断');
+    buf.writeln('- 输出格式：四个部分以「一、事业财富」「二、婚姻感情」「三、学习/发展」');
+    buf.writeln('  「四、健康分析」为标题，纯文本，不用markdown符号');
+
+    return buf.toString();
+  }
+
+  /// Free-form Q&A: same chart/pattern/luck context, but the AI answers the
+  /// user's specific [question] (e.g. "甲辰年会发生什么大事？选项1234…哪一件？").
+  static String buildCustom({
+    required ChartResult chart,
+    required ChartPattern pattern,
+    required List<RuleMatch> ruleMatches,
+    required List<AnalysisExample> examples,
+    required String question,
+    DecadeData? decade,
+    FlowYearData? year,
+  }) {
+    final buf = StringBuffer();
+    _writeContext(buf,
+        chart: chart,
+        pattern: pattern,
+        ruleMatches: ruleMatches,
+        examples: examples,
+        decade: decade,
+        year: year);
+
+    buf.writeln();
+    buf.writeln('【用户问题】');
+    buf.writeln(question.trim());
+    buf.writeln();
+    buf.writeln('请以命理师身份，专门针对上述问题作答：');
+    buf.writeln('- 先据原局格局、用神忌神与此运/此年的干支作用（合冲刑害、引动、争合、'
+        '某气走完）推演，给出明确判断，不要含糊两可');
+    buf.writeln('- 若问题给出多个选项，必须先明确指出最可能的一项（如「答案：第X项」），'
+        '再逐条说明各选项的可能性高低及命理依据');
+    buf.writeln('- 若问题涉及具体年份/流月，指出应期（何时最易触发）及触发的干支原理');
+    buf.writeln('- 若命理信息不足以断定，坦诚说明并给出倾向性判断，不可编造');
+    buf.writeln('- 语言自然专业，纯文本，不用markdown符号');
+
+    return buf.toString();
+  }
+
+  /// Shared context block: persona + examples + Hu Yiming notes + chart +
+  /// pattern + rule hits + 大运/流年 luck interactions.
+  static void _writeContext(
+    StringBuffer buf, {
+    required ChartResult chart,
+    required ChartPattern pattern,
+    required List<RuleMatch> ruleMatches,
+    required List<AnalysisExample> examples,
+    DecadeData? decade,
+    FlowYearData? year,
+  }) {
     buf.writeln('你是一位经验丰富的八字命理师，以《子平真诠》格局法论命：用神专求月令，');
     buf.writeln('先定格局，再看成败，忌以单纯身强身弱套论。参考以下真实案例的分析风格和逻辑：');
     buf.writeln();
@@ -78,24 +151,6 @@ class AnalysisPrompt {
       buf.writeln('大运列表: ${chart.decades.map((d) => '${d.ganZhi}(${d.startAge}-${d.endAge}岁)').join('、')}，'
           '${chart.daYunForward ? '顺行' : '逆行'}，${chart.qiYunDescription}');
     }
-
-    buf.writeln();
-    buf.writeln('按以下4个类别提供详细分析（使用古典原理，指出用神/忌神/格局变化，');
-    buf.writeln('每类预测1-2个可能事件并给出触发依据，如某支被引动、某干争合）：');
-    buf.writeln('1. 事业财富');
-    buf.writeln('2. 婚姻感情');
-    buf.writeln('3. 学习/发展');
-    buf.writeln('4. 健康分析');
-    buf.writeln();
-    buf.writeln('要求：');
-    buf.writeln('- 语言自然、专业，像真实命理师批八字一样，风格贴近上方案例');
-    buf.writeln('- 先讲原局格局如何被此运/此年影响（成格增益或破格受损），再落到具体人事');
-    buf.writeln('- 若命局有特殊场景（如印绶被财破、伤官见官、比劫合官），必须点明并');
-    buf.writeln('  参照案例中同类格局的处理方式给出细腻论断');
-    buf.writeln('- 输出格式：四个部分以「一、事业财富」「二、婚姻感情」「三、学习/发展」');
-    buf.writeln('  「四、健康分析」为标题，纯文本，不用markdown符号');
-
-    return buf.toString();
   }
 
   static String _truncate(String s, int max) =>

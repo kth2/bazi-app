@@ -206,5 +206,37 @@ void main() {
       expect(prompt, contains('庚大肠/痔疮')); // disease table present
       expect(prompt, contains('断应期')); // timing theory present
     });
+
+    test('custom-question prompt carries full context + the user question',
+        () async {
+      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
+      final pattern = PatternDetector.detect(chart1990);
+      final decade = chart1990.decades.first;
+      final year = ChartService.flowYearsOf(chart1990, decade).first;
+      const question =
+          '甲辰年最可能发生哪件事？1读博毕业 2感情重挫 3官非牢狱 4双亲离世';
+
+      final prompt = AnalysisPrompt.buildCustom(
+        chart: chart1990,
+        pattern: pattern,
+        ruleMatches: const [],
+        examples: await repo.findSimilar(pattern.tags),
+        question: question,
+        decade: decade,
+        year: year,
+      );
+
+      // Shared context still present.
+      expect(prompt, contains('【案例参考】'));
+      expect(prompt, contains('命理知识要点（胡一鸣法）'));
+      expect(prompt, contains('格局判定: 格局：正官格'));
+      expect(prompt, contains('当前流年: ${year.year}年'));
+      // Question and answer-format instructions.
+      expect(prompt, contains('【用户问题】'));
+      expect(prompt, contains(question));
+      expect(prompt, contains('必须先明确指出最可能的一项'));
+      // Not the 4-category format.
+      expect(prompt, isNot(contains('四、健康分析')));
+    });
   });
 }

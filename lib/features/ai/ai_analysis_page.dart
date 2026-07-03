@@ -24,6 +24,11 @@ class AiAnalysisPage extends ConsumerStatefulWidget {
 class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
   Future<ScopedAnalysis>? _future;
 
+  final _questionController = TextEditingController();
+  final List<CustomAnswer> _answers = [];
+  bool _asking = false;
+  String? _qaError;
+
   String get _scopeTitle => widget.year != null
       ? '流年 ${widget.year!.year} ${widget.year!.ganZhi}'
       : widget.decade != null
@@ -34,6 +39,47 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
   void initState() {
     super.initState();
     _start();
+  }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _ask() async {
+    final q = _questionController.text.trim();
+    if (q.isEmpty || _asking) return;
+    final chart = ref.read(chartResultProvider);
+    if (chart == null) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _asking = true;
+      _qaError = null;
+    });
+    final service = ref.read(baziAnalysisServiceProvider);
+    try {
+      final rules = await ref.read(rulesProvider.future);
+      final ans = await service.askQuestion(
+        chart,
+        rules,
+        q,
+        decade: widget.decade,
+        year: widget.year,
+      );
+      if (!mounted) return;
+      setState(() {
+        _answers.insert(0, ans);
+        _questionController.clear();
+        _asking = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _qaError = '$e';
+        _asking = false;
+      });
+    }
   }
 
   void _start() {
@@ -141,6 +187,7 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
                             fontSize: 13, fontWeight: FontWeight.w600)),
                   ),
                 ),
+              _buildQaSection(),
               for (final (title, body) in sections)
                 if (body.isNotEmpty)
                   Card(
@@ -176,6 +223,105 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  /// Free-form question input + accumulated answers.
+  Widget _buildQaSection() {
+    return Card(
+      margin: const EdgeInsets.only(top: 12),
+      color: kGoldAccent.withValues(alpha: 0.06),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.psychology_alt, size: 20, color: kPrimaryRed),
+                const SizedBox(width: 6),
+                Text('向 AI 提问（针对本$_scopeTitle）',
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: kPrimaryRed)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '可问具体事件、择日、多选判断等。例如：'
+              '「甲辰年最可能发生哪件事？1读博毕业 2感情重挫 3官非牢狱 4双亲离世」',
+              style: TextStyle(
+                  fontSize: 12, color: kInkBlack.withValues(alpha: 0.55)),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _questionController,
+              minLines: 2,
+              maxLines: 5,
+              textInputAction: TextInputAction.newline,
+              decoration: const InputDecoration(
+                hintText: '输入你的问题…',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: _asking
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: kPaperCream))
+                    : const Icon(Icons.send),
+                label: Text(_asking ? '命理师推演中…' : '提问'),
+                onPressed: _asking ? null : _ask,
+              ),
+            ),
+            if (_qaError != null) ...[
+              const SizedBox(height: 10),
+              Text(_qaError!,
+                  style: const TextStyle(fontSize: 13, color: kPrimaryRed)),
+            ],
+            for (final ans in _answers) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: kInkBlack.withValues(alpha: 0.12)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.help_outline,
+                            size: 16, color: kGoldAccent),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(ans.question,
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 16),
+                    SelectableText(ans.answer,
+                        style: const TextStyle(fontSize: 14, height: 1.7)),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
