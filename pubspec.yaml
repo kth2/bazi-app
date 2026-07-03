@@ -1,0 +1,49 @@
+name: bazi_app
+description: "Bazi (八字) chart calculator and analysis PWA."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Bazi calculation engine (four pillars, ten gods, da yun, shen sha)
+  bazi_core: ^0.6.7
+  # Astronomy backend of bazi_core; needed directly for Location, jieqi
+  # boundaries and day ganzhi when building the flow month/day timeline
+  sxwnl_spa_dart: ^0.18.5
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Rules database (SQLite, web-compatible via WASM)
+  drift: ^2.28.2
+  drift_flutter: ^0.3.0
+
+  # AI service HTTP calls (Gemini / OpenRouter)
+  http: ^1.5.0
+
+  # Local storage: API keys, cached AI responses, saved charts
+  shared_preferences: ^2.5.3
+
+  # Date formatting / localization
+  intl: ^0.20.2
+
+  # Chinese font support (Noto Sans SC / Noto Serif SC)
+  google_fonts: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.28.2
+  build_runner: ^2.7.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/rules/seed_rules.json
+    - assets/examples/analysis_examples.json

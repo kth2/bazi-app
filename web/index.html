@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="八字排盘与命理分析 — Bazi four-pillar chart calculator with Da Yun, Liu Nian and AI analysis.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#8B1E1E">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="八字排盘">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>八字排盘 · Bazi Chart</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Loading splash shown until Flutter boots */
+    #splash {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #FDF6EC; color: #8B1E1E;
+      font-family: "Noto Serif SC", "Songti SC", serif;
+      z-index: 9999; transition: opacity .3s;
+    }
+    #splash .glyph { font-size: 64px; letter-spacing: 8px; }
+    #splash .sub { margin-top: 12px; font-size: 14px; opacity: .6; }
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <div class="glyph">八字</div>
+    <div class="sub">排盘中…</div>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var s = document.getElementById('splash');
+      if (s) { s.style.opacity = '0'; setTimeout(function(){ s.remove(); }, 300); }
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

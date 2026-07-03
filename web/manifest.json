@@ -1,0 +1,36 @@
+{
+    "name": "八字排盘 · Bazi Chart",
+    "short_name": "八字排盘",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#FDF6EC",
+    "theme_color": "#8B1E1E",
+    "description": "八字排盘与命理分析：四柱、十神、神煞、五行力量、大运流年流月流日、AI 深度分析。",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "lang": "zh-CN",
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
