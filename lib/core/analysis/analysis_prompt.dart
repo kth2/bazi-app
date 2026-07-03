@@ -9,6 +9,18 @@ import 'pattern_detector.dart';
 /// Builds the AI prompt: chart + pattern + rule hits + analogous real
 /// cases + the current 大运/流年 context.
 class AnalysisPrompt {
+  /// Distilled principles from 《胡一鸣八字命理》 — knowledge the rule
+  /// engine can't express (timing theory, disease mapping, dynamics).
+  static const String kHuYimingNotes = '''
+【命理知识要点（胡一鸣法）】
+- 判旺弱定格局：旺者有克泄、弱者有生扶为正格，取中庸之道；克泄/生扶皆无用则为变格（从格），顺势行舟——弱让它更弱、旺让它更旺，反之大凶。
+- 有钱两条件：有来源（食伤）且守得住（财不被比劫克尽）。食伤生财为付出型赚钱：身旺轻松、身弱辛苦劳累；伤官生财敢想敢干放得开，食神生财含蓄有顾忌。官印相生为被动型赚钱，上班管理一流，创业多倒（食伤克官不善找财源）。财生官、官生印者，借官位地位职位赚钱；身旺食伤生财又财生官者为老板创业之命。
+- 比劫分财：财来财去，到头一场空，男命于妻不利；身旺逢官运克去比劫，财复活为意外之财。身旺食伤受印克则郁闷，逢财运财破印、食伤复活为意外收获。身弱财破印（无食伤）主破财，要钱不要命。
+- 婚恋：男看财星、以食伤为动力；女看官杀、以财为动力。有星无动力或有动力无星者，逢引动之运年发动。夫妻宫（日支）坐食伤者眼光高、所遇皆看不起。男食伤生财者旺妻待妻好；女财生官者旺夫；官克日主者其夫待她不佳。食伤合官杀者易怀孕、恋地位。
+- 健康（干支受伤对应之病）：甲胆/骨折/秃头，乙肝/筋/风湿，丙小肠/眼疾，丁心脏/供血不足，戊胃/肌肉/妇科瘤，己脾/糖尿病，庚大肠/痔疮，辛肺/呼吸道/皮肤过敏，壬癸肾膀胱/血液/中风高血压/内分泌/耳鸣/子宫。命局关键「通关之神」受伤时连锁而病（如金伤则先痔疮后肾病）；身旺无泄者气机郁滞、情绪压抑成疾。天干地支同时受克，轻则意外官非，重则大凶。
+- 断应期：某干支之气「走完、被克、被合」即为应期；合就是拘绊，功能发挥不出；流年流月由外到内切入，注意连锁反应（甲被合则乙出、乙被克则甲复出，吉凶随之翻转）。
+''';
+
   /// [decade]/[year] null → whole-life analysis.
   static String build({
     required ChartResult chart,
@@ -33,6 +45,7 @@ class AnalysisPrompt {
       buf.writeln();
     }
 
+    buf.writeln(kHuYimingNotes);
     buf.writeln('现在分析以下命局：');
     buf.writeln();
     buf.writeln('原局: ${jsonEncode(chart.toJson())}');

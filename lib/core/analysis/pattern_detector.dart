@@ -119,10 +119,29 @@ class PatternDetector {
       scenarios.add('比劫争财');
     }
 
+    // 胡一鸣法: extreme support imbalance suggests 变格 (从格) — the chart
+    // follows the dominant force instead of seeking balance.
+    final support = chart.elementStrength.supportPercent;
+    if (support <= 20) {
+      scenarios.add('从势之象（变格倾向）');
+    } else if (support >= 80) {
+      scenarios.add('从旺之象（变格倾向）');
+    }
+
+    // 身旺无泄: strong day master with no 食伤 outlet — pent-up qi
+    // (胡一鸣: 郁闷之象, health/mood risk).
+    if (chart.elementStrength.verdict == '身强' &&
+        countAny(const {'食神', '伤官'}) == 0) {
+      scenarios.add('身旺无泄');
+    }
+
     final tags = <String>{
       geJu,
       if (geJu == '正印格' || geJu == '偏印格') '印绶格',
       ...scenarios,
+      if (support <= 20) ...['变格', '从势格', '从弱格'],
+      if (support >= 80) ...['变格', '从旺格'],
+      if (scenarios.contains('身旺无泄')) '身旺无泄',
       chart.elementStrength.verdict == '身强'
           ? '身强'
           : chart.elementStrength.verdict == '身弱'

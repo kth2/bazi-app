@@ -51,11 +51,25 @@ void main() {
   group('AnalysisExample tagging', () {
     final examples = loadExamplesFromFile();
 
-    test('all 6 corpus examples parse', () {
-      expect(examples.length, 6);
+    test('all 13 corpus examples parse (6 weibo + 7 Hu Yiming book cases)',
+        () {
+      expect(examples.length, 13);
       for (final e in examples) {
         expect(e.content, isNotEmpty);
       }
+    });
+
+    test('Hu Yiming book cases carry method-specific tags', () {
+      final byId = {for (final e in examples) e.id: e};
+      // 翻砂厂老板: 身旺正格 + 通关 + 食伤生财.
+      final boss = byId['book_hu_001']!;
+      expect(boss.tags, containsAll(['通关', '食伤生财', '正格']));
+      expect(boss.tags, contains('身强')); // 身旺 normalized to 身强
+      // 从势格 case normalizes to 变格 + 身弱.
+      final congShi = byId['book_hu_003']!;
+      expect(congShi.tags, containsAll(['从势格', '变格', '身弱']));
+      // 身旺无泄 suicide case.
+      expect(byId['book_hu_005']!.tags, contains('身旺无泄'));
     });
 
     test('pattern keywords extracted from corpus', () {
@@ -177,6 +191,20 @@ void main() {
         decadeGanZhi: '壬午', // 午 clashes natal 子 (month branch)
       );
       expect(withClash.any((s) => s.contains('大运')), isTrue);
+    });
+
+    test('Hu Yiming knowledge notes are embedded in every prompt', () async {
+      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
+      final pattern = PatternDetector.detect(chart1990);
+      final prompt = AnalysisPrompt.build(
+        chart: chart1990,
+        pattern: pattern,
+        ruleMatches: const [],
+        examples: await repo.findSimilar(pattern.tags),
+      );
+      expect(prompt, contains('命理知识要点（胡一鸣法）'));
+      expect(prompt, contains('庚大肠/痔疮')); // disease table present
+      expect(prompt, contains('断应期')); // timing theory present
     });
   });
 }

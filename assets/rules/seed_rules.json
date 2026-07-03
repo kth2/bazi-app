@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "rules": [
     {
       "id": "overall_shen_qiang",
@@ -706,6 +706,199 @@
       ],
       "interpretation": "四柱不见印星，学业星伏而不显。主对正规学历较为随缘，或求学路径不循常轨。然天道酬勤，靠实践历练与自学同样可成才，未必以文凭论高下。",
       "source": "经验总结"
+    },
+    {
+      "id": "hu_career_guan_yin_shang_ban",
+      "category": "事业",
+      "title": "官印相生·上班一流",
+      "weight": 7,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "hasShiShen", "value": "正官", "required": true},
+        {"type": "hasShiShen", "value": "印星", "required": true}
+      ],
+      "interpretation": "官印相生之人是一流管理人员，被动型赚钱：借组织与职位而贵，上班晋升之路顺畅。但此格不善自寻财源，独立创业多有折损，宜依托平台而非单打独斗。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_career_cai_guan_yin",
+      "category": "事业",
+      "title": "财生官、官生印",
+      "weight": 7,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "hasShiShen", "value": "财星", "required": true},
+        {"type": "hasShiShen", "value": "正官", "required": true},
+        {"type": "hasShiShen", "value": "印星", "required": true}
+      ],
+      "interpretation": "财生官、官生印一气流转，当官打工之命。财无伤者，借官位、地位、职位来赚钱，职级越高财路越宽；财受克时则为标准清官，位高而财平。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_career_lao_ban_ming",
+      "category": "事业",
+      "title": "老板创业命",
+      "weight": 8,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "verdict", "value": "身强", "required": true},
+        {"type": "hasShiShen", "value": "食伤", "required": true},
+        {"type": "hasShiShen", "value": "财星", "required": true},
+        {"type": "hasShiShen", "value": "官杀", "required": true}
+      ],
+      "interpretation": "身旺而食伤生财、财又生官：食伤生财是想赚钱有财源，财生官是求地位，此为当老板创业之命。用食伤之人打江山一流，敢以才华智慧开辟财路。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_career_shi_shang_ke_guan",
+      "category": "事业",
+      "title": "食伤克官·不服管束",
+      "weight": 6,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "hasShiShen", "value": "食伤", "scope": "stem", "required": true},
+        {"type": "hasShiShen", "value": "官杀", "required": true}
+      ],
+      "interpretation": "食伤克官杀之人不认输不服输，有一股拼劲，爱自由不愿受约束，看理想比一切重要。求职面试易因无形傲气吃亏，与上司权威易生摩擦；宜自由职业、专业技术或自立门户。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_wealth_shen_ruo_xin_ku",
+      "category": "财富",
+      "title": "身弱食伤生财·辛苦财",
+      "weight": 7,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "verdict", "value": "身弱", "required": true},
+        {"type": "hasShiShen", "value": "食伤", "required": true},
+        {"type": "hasShiShen", "value": "财星", "required": true}
+      ],
+      "interpretation": "身弱而食伤生财，赚钱辛苦劳累，付出与所得难成正比。忌投机倒把走偏门——纵然爱走捷径也只能赚点小钱；宜养足底气（印比帮身之运）再图大财。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_wealth_shang_guan_sheng_cai",
+      "category": "财富",
+      "title": "伤官生财·敢想敢干",
+      "weight": 6,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "hasShiShen", "value": "伤官", "scope": "stem", "required": true},
+        {"type": "hasShiShen", "value": "财星", "required": true}
+      ],
+      "interpretation": "伤官生财之人非常敢，思想放得开，带傲气与霸气，赚钱路子野而快。食神生财则含蓄有顾忌；伤官生财者风流敢为，宜做贸易、口才与创意变现，唯须防步子太大。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_wealth_shen_ruo_cai_po_yin",
+      "category": "财富",
+      "title": "身弱财破印",
+      "weight": 7,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "verdict", "value": "身弱", "required": true},
+        {"type": "hasShiShen", "value": "财星", "required": true},
+        {"type": "hasShiShen", "value": "印星", "required": true},
+        {"type": "lacksShiShen", "value": "食伤"}
+      ],
+      "interpretation": "身弱以印为根基，财来破印则根基受损，主破财，且多为要钱不要命、为财伤身之象。命有食伤通道者可进小财但身体转差；逢印复之运方得喘息。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_marriage_male_wang_qi",
+      "category": "婚姻",
+      "title": "男命食伤生财·旺妻",
+      "weight": 6,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "gender", "value": "男", "required": true},
+        {"type": "hasShiShen", "value": "食伤", "required": true},
+        {"type": "hasShiShen", "value": "财星", "required": true}
+      ],
+      "interpretation": "男以财为妻，食伤生财者气从我出而养财，对妻子极好，是为旺妻之命。婚缘之动力在食伤：有财无食伤者姻缘待食伤运年引动，有食伤无财者待财运年发动。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_marriage_female_wang_fu",
+      "category": "婚姻",
+      "title": "女命财生官·旺夫",
+      "weight": 6,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "gender", "value": "女", "required": true},
+        {"type": "hasShiShen", "value": "财星", "required": true},
+        {"type": "hasShiShen", "value": "官杀", "required": true}
+      ],
+      "interpretation": "女以官为夫，财生官者以自身财气滋养夫星，是为旺夫之命，婚后夫运渐起。女命婚缘之动力在财星：财旺则姻缘主动，逢财之运年感情发动。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_marriage_female_ri_zhi_shi_shang",
+      "category": "婚姻",
+      "title": "女命夫妻宫坐食伤",
+      "weight": 6,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "gender", "value": "女", "required": true},
+        {"type": "hasShiShen", "value": "食伤", "position": "日柱", "scope": "main", "required": true}
+      ],
+      "interpretation": "女命夫妻宫（日支）坐食伤，多为眼光较高之人，所遇男子常入不了眼、非其理想对象。并非无缘，而是标准苛刻；放下完美滤镜、重内在合拍，姻缘自顺。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_marriage_female_shao_nai_nai",
+      "category": "婚姻",
+      "title": "女命身弱官印相生",
+      "weight": 7,
+      "minMatchRatio": 0.75,
+      "conditions": [
+        {"type": "gender", "value": "女", "required": true},
+        {"type": "verdict", "value": "身弱", "required": true},
+        {"type": "hasShiShen", "value": "正官", "required": true},
+        {"type": "hasShiShen", "value": "印星", "required": true}
+      ],
+      "interpretation": "女命身弱而官印相生，官星生印护身：在外是高级主管之才，在家则有少奶奶之福，丈夫与长辈皆疼爱，长辈缘极佳，年龄差距越大越得照拂。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_edu_xue_zhe_ming",
+      "category": "学历",
+      "title": "身旺食伤无财·学者命",
+      "weight": 7,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "verdict", "value": "身强", "required": true},
+        {"type": "hasShiShen", "value": "食伤", "required": true},
+        {"type": "lacksShiShen", "value": "财星", "required": true}
+      ],
+      "interpretation": "身旺用食伤而命中无财，读书一流，是学者之命：才华不为钱财所夺，多才多艺，琴棋书画样样能上手。逢财之运年则易把知识变现或改行经商，学术之心随之分散。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_edu_shen_ruo_yong_yin",
+      "category": "学历",
+      "title": "身弱用印·静心读书",
+      "weight": 6,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "verdict", "value": "身弱", "required": true},
+        {"type": "hasShiShen", "value": "印星", "required": true}
+      ],
+      "interpretation": "读书要能安定静心（印）又能理解表达（食伤）。身弱以印为用者，幼年行印运学习必佳，长辈师长助力大；印不受伤是前提，早遇财运破印则早熟分心、影响学业。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "hu_health_shen_wang_wu_xie",
+      "category": "健康",
+      "title": "身旺无泄·气机郁滞",
+      "weight": 6,
+      "minMatchRatio": 1.0,
+      "conditions": [
+        {"type": "verdict", "value": "身强", "required": true},
+        {"type": "lacksShiShen", "value": "食伤", "required": true}
+      ],
+      "interpretation": "身旺而全局无食伤宣泄，旺气无处可去，气机郁滞：性格上固执、情绪易压抑郁闷，健康上防肝气不舒、情志之疾。宜运动、倾诉、创作等主动开泄之道，逢食伤之运年身心俱畅。",
+      "source": "胡一鸣八字命理"
     },
     {
       "id": "health_mu_ruo",

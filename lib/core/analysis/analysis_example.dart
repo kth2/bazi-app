@@ -31,6 +31,10 @@ class AnalysisExample {
     '枭神夺食', '比劫合官', '比劫争财', '建禄用官', '月劫用官', '财多身弱',
     '杀印相生', '官印相生', '食伤生财', '拱金', '拱火', '三会', '三合',
     '争合', '相神', '败格', '身强', '身弱',
+    // 胡一鸣法 terminology
+    '正格', '变格', '从势格', '从弱格', '从旺格', '通关', '身旺',
+    '身旺无泄', '食神克官杀', '食伤克官', '伤官生财', '食神生财',
+    '财生官', '官生印', '比劫分财', '印克食伤', '连锁反应', '走完',
   ];
 
   factory AnalysisExample.fromJson(Map<String, dynamic> json) {
@@ -42,9 +46,15 @@ class AnalysisExample {
       for (final kw in kPatternVocabulary)
         if (scanText.contains(kw)) kw,
     };
-    // 印绶格 and 正印格 are synonyms in the corpus; normalize.
+    // Normalize synonyms across corpora (子平真诠 vs 胡一鸣 terminology).
     if (tags.contains('印绶格')) tags.add('正印格');
     if (tags.contains('印绶被财破')) tags.add('财破印');
+    if (tags.contains('身旺')) tags.add('身强');
+    if (tags.contains('从势格') || tags.contains('从弱格')) {
+      tags.addAll(['变格', '身弱']);
+    }
+    if (tags.contains('从旺格')) tags.addAll(['变格', '身强']);
+    if (tags.contains('食神克官杀')) tags.add('食伤克官');
 
     return AnalysisExample(
       id: '${json['id']}',
