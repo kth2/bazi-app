@@ -14,12 +14,14 @@ A Bazi (八字) four-pillar chart calculator and analysis app, built with Flutte
 
 ## AI setup (bring your own free key)
 
-Open the ⚙️ settings on the chart page and paste an API key:
+Open the ⚙️ settings on the chart page. Four providers are supported, each with its **own independently stored key** (switching providers never overwrites another key):
 
 - **Gemini**: free key from [Google AI Studio](https://aistudio.google.com)
-- **OpenRouter**: free key from [openrouter.ai](https://openrouter.ai) (default model is a `:free` one)
+- **OpenRouter**: free key from [openrouter.ai](https://openrouter.ai) — the model picker lists only currently available `:free` models, fetched live
+- **Agnes**: free key from [platform.agnes-ai.com](https://platform.agnes-ai.com) (free tier ~20 requests/min)
+- **其他 (Other)**: any OpenAI-compatible service — set Base URL + key + model
 
-Keys are stored in your browser's local storage only.
+The 🔎 button next to the model field fetches the provider's live model list so you always pick one that actually exists. Keys are stored in your browser's local storage only.
 
 ## Install on your phone
 
