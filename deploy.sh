@@ -6,6 +6,11 @@
 # index.html to production.
 set -euo pipefail
 
+# Disable Git-Bash/MSYS path conversion, which otherwise rewrites the
+# "/bazi-app/" argument into a Windows path like "C:/Program Files/Git/...".
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL='*'
+
 REPO="https://github.com/kth2/bazi-app.git"
 BASE_HREF="/bazi-app/"
 
