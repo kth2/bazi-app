@@ -10,7 +10,7 @@ A Bazi (八字) four-pillar chart calculator and analysis app, built with Flutte
 - **五行力量**: weighted element scoring (hidden-stem proportions, 月令 weighting, 旺相休囚死) with 身强/身弱/中和 verdict
 - **岁运**: full 大运 → 流年 → 流月 → 流日 drill-down timeline (jieqi-bounded months)
 - **命理分析**: weighted rule engine (SQLite via drift) with partial-match scoring across 整体命局/财富/事业/学历/婚姻/健康, rules sourced from 渊海子平, 子平真诠, 三命通会
-- **AI 深度分析**: 格局法 pattern detection (格局/用神/特殊场景 like 财破印, 伤官见官, 比劫合官), matches analogous real-world example cases, and prompts Gemini or OpenRouter for a 4-category reading (事业财富/婚姻感情/学习发展/健康) at whole-life, 大运, or 流年 scope. Results cached locally.
+- **AI 深度分析**: 格局法 pattern detection (格局/用神/特殊场景 like 财破印, 伤官见官, 比劫合官), matches analogous real-world example cases, and prompts Gemini or OpenRouter for a 4-category reading (事业财富/婚姻感情/学习发展/健康) at whole-life, 大运, 流年, 流月, or 流日 scope — monthly readings forecast concrete events with likely trigger days (应期), daily readings give event likelihood plus 宜忌 advice. Results cached locally.
 
 ## AI setup (bring your own free key)
 

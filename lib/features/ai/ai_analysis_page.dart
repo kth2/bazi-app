@@ -10,12 +10,15 @@ import '../../services/ai_service.dart';
 import '../../theme.dart';
 import '../settings/settings_sheet.dart';
 
-/// AI deep analysis for 整体命局 / 大运 / 流年 — 4 life categories.
+/// AI deep analysis for 整体命局 / 大运 / 流年 / 流月 / 流日 —
+/// 4 life categories.
 class AiAnalysisPage extends ConsumerStatefulWidget {
   final DecadeData? decade;
   final FlowYearData? year;
+  final FlowMonthData? month;
+  final FlowDayData? day;
 
-  const AiAnalysisPage({super.key, this.decade, this.year});
+  const AiAnalysisPage({super.key, this.decade, this.year, this.month, this.day});
 
   @override
   ConsumerState<AiAnalysisPage> createState() => _AiAnalysisPageState();
@@ -29,11 +32,12 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
   bool _asking = false;
   String? _qaError;
 
-  String get _scopeTitle => widget.year != null
-      ? '流年 ${widget.year!.year} ${widget.year!.ganZhi}'
-      : widget.decade != null
-          ? '大运 ${widget.decade!.ganZhi}'
-          : '整体命局';
+  String get _scopeTitle => BaziAnalysisService.scopeLabel(
+        decade: widget.decade,
+        year: widget.year,
+        month: widget.month,
+        day: widget.day,
+      );
 
   @override
   void initState() {
@@ -66,6 +70,8 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
         q,
         decade: widget.decade,
         year: widget.year,
+        month: widget.month,
+        day: widget.day,
       );
       if (!mounted) return;
       setState(() {
@@ -89,6 +95,14 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
     setState(() {
       _future = () async {
         final rules = await ref.read(rulesProvider.future);
+        if (widget.day != null) {
+          return service.analyzeLiuRi(chart, rules, widget.decade!,
+              widget.year!, widget.month!, widget.day!);
+        }
+        if (widget.month != null) {
+          return service.analyzeLiuYue(
+              chart, rules, widget.decade!, widget.year!, widget.month!);
+        }
         if (widget.year != null) {
           return service.analyzeLiuNian(
               chart, rules, widget.decade!, widget.year!);

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:bazi_app/core/analysis/analysis_example.dart';
 import 'package:bazi_app/core/analysis/analysis_prompt.dart';
+import 'package:bazi_app/core/analysis/bazi_analysis_service.dart';
 import 'package:bazi_app/core/analysis/example_repository.dart';
 import 'package:bazi_app/core/analysis/pattern_detector.dart';
 import 'package:bazi_app/core/engine/chart_service.dart';
@@ -193,6 +194,102 @@ void main() {
       expect(withClash.any((s) => s.contains('大运')), isTrue);
     });
 
+    test('luck interactions include 流月 and 流日 pillars', () {
+      final inter = ChartService.luckInteractions(
+        chart1990,
+        liuYueGanZhi: '丙午', // 午 clashes natal 子 (month branch)
+        liuRiGanZhi: '甲申', // 申 clashes natal 寅 (day branch)
+      );
+      expect(inter.any((s) => s.contains('流月')), isTrue);
+      expect(inter.any((s) => s.contains('流日')), isTrue);
+    });
+
+    test('flow-month prompt carries 流月 context and monthly event asks',
+        () async {
+      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
+      final pattern = PatternDetector.detect(chart1990);
+      final decade = chart1990.decades.first;
+      final year = ChartService.flowYearsOf(chart1990, decade).first;
+      final month = ChartService.flowMonthsOf(chart1990, year.year).first;
+
+      final prompt = AnalysisPrompt.build(
+        chart: chart1990,
+        pattern: pattern,
+        ruleMatches: const [],
+        examples: await repo.findSimilar(pattern.tags),
+        decade: decade,
+        year: year,
+        month: month,
+      );
+
+      expect(prompt, contains('当前大运: ${decade.ganZhi}'));
+      expect(prompt, contains('当前流年: ${year.year}年'));
+      expect(prompt, contains('当前流月: ${month.ganZhi}月'));
+      expect(prompt, contains(month.jieName));
+      expect(prompt, contains('分析此流月'));
+      expect(prompt, contains('本月内可能发生的具体事件'));
+      expect(prompt, contains('应期日'));
+      expect(prompt, contains('一、事业财富'));
+      expect(prompt, contains('四、健康分析'));
+      expect(prompt, isNot(contains('当前流日')));
+    });
+
+    test('flow-day prompt carries 流日 context and daily do/avoid asks',
+        () async {
+      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
+      final pattern = PatternDetector.detect(chart1990);
+      final decade = chart1990.decades.first;
+      final year = ChartService.flowYearsOf(chart1990, decade).first;
+      final month = ChartService.flowMonthsOf(chart1990, year.year).first;
+      final day = ChartService.flowDaysOf(chart1990, month).first;
+
+      final prompt = AnalysisPrompt.build(
+        chart: chart1990,
+        pattern: pattern,
+        ruleMatches: const [],
+        examples: await repo.findSimilar(pattern.tags),
+        decade: decade,
+        year: year,
+        month: month,
+        day: day,
+      );
+
+      expect(prompt, contains('当前流月: ${month.ganZhi}月'));
+      expect(prompt, contains('当前流日:'));
+      expect(prompt, contains('${day.ganZhi}日'));
+      expect(prompt, contains('分析此流日'));
+      expect(prompt, contains('宜忌建议'));
+      expect(prompt, contains('一、事业财富'));
+      expect(prompt, contains('四、健康分析'));
+    });
+
+    test('custom-question prompt at 流日 scope embeds the day pillar',
+        () async {
+      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
+      final pattern = PatternDetector.detect(chart1990);
+      final decade = chart1990.decades.first;
+      final year = ChartService.flowYearsOf(chart1990, decade).first;
+      final month = ChartService.flowMonthsOf(chart1990, year.year).first;
+      final day = ChartService.flowDaysOf(chart1990, month).first;
+
+      final prompt = AnalysisPrompt.buildCustom(
+        chart: chart1990,
+        pattern: pattern,
+        ruleMatches: const [],
+        examples: await repo.findSimilar(pattern.tags),
+        question: '今日适合签合同吗？',
+        decade: decade,
+        year: year,
+        month: month,
+        day: day,
+      );
+
+      expect(prompt, contains('当前流日:'));
+      expect(prompt, contains('${day.ganZhi}日'));
+      expect(prompt, contains('【用户问题】'));
+      expect(prompt, contains('今日适合签合同吗？'));
+    });
+
     test('Hu Yiming knowledge notes are embedded in every prompt', () async {
       final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
       final pattern = PatternDetector.detect(chart1990);
@@ -237,6 +334,31 @@ void main() {
       expect(prompt, contains('必须先明确指出最可能的一项'));
       // Not the 4-category format.
       expect(prompt, isNot(contains('四、健康分析')));
+    });
+  });
+
+  group('BaziAnalysisService.scopeLabel', () {
+    test('labels every scope level deterministically', () {
+      final decade = chart1990.decades.first;
+      final year = ChartService.flowYearsOf(chart1990, decade).first;
+      final month = ChartService.flowMonthsOf(chart1990, year.year).first;
+      final day = ChartService.flowDaysOf(chart1990, month).first;
+
+      expect(BaziAnalysisService.scopeLabel(), '整体命局');
+      expect(BaziAnalysisService.scopeLabel(decade: decade),
+          '大运 ${decade.ganZhi}（${decade.startAge}-${decade.endAge}岁）');
+      expect(BaziAnalysisService.scopeLabel(decade: decade, year: year),
+          '流年 ${year.year} ${year.ganZhi}');
+      expect(
+          BaziAnalysisService.scopeLabel(
+              decade: decade, year: year, month: month),
+          '流月 ${year.year}年${month.ganZhi}月（${month.jieName}）');
+      final label = BaziAnalysisService.scopeLabel(
+          decade: decade, year: year, month: month, day: day);
+      expect(label, startsWith('流日 '));
+      expect(label, contains(day.ganZhi));
+      // ISO-style date so cache keys stay unique across months/years.
+      expect(label, contains('${day.date.year}-'));
     });
   });
 }

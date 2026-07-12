@@ -22,6 +22,7 @@ class _ChartPageState extends ConsumerState<ChartPage> {
   DecadeData? _selectedDecade;
   FlowYearData? _selectedYear;
   FlowMonthData? _selectedMonth;
+  FlowDayData? _selectedDay;
   List<FlowYearData> _flowYears = [];
   List<FlowMonthData> _flowMonths = [];
   List<FlowDayData> _flowDays = [];
@@ -34,6 +35,7 @@ class _ChartPageState extends ConsumerState<ChartPage> {
       _flowMonths = [];
       _selectedMonth = null;
       _flowDays = [];
+      _selectedDay = null;
     });
   }
 
@@ -43,6 +45,7 @@ class _ChartPageState extends ConsumerState<ChartPage> {
       _flowMonths = ChartService.flowMonthsOf(result, y.year);
       _selectedMonth = null;
       _flowDays = [];
+      _selectedDay = null;
     });
   }
 
@@ -50,6 +53,13 @@ class _ChartPageState extends ConsumerState<ChartPage> {
     setState(() {
       _selectedMonth = m;
       _flowDays = ChartService.flowDaysOf(result, m);
+      _selectedDay = null;
+    });
+  }
+
+  void _selectDay(FlowDayData d) {
+    setState(() {
+      _selectedDay = _selectedDay?.date == d.date ? null : d;
     });
   }
 
@@ -417,40 +427,90 @@ class _ChartPageState extends ConsumerState<ChartPage> {
                 ),
               ),
             ],
+            if (_selectedMonth != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: Text(
+                    'AI 分析此流月（${_selectedMonth!.ganZhi}月 '
+                    '${_selectedMonth!.jieName}起）'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AiAnalysisPage(
+                      decade: _selectedDecade,
+                      year: _selectedYear,
+                      month: _selectedMonth,
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (_flowDays.isNotEmpty) ...[
               const Divider(),
-              Text('流日（${_selectedMonth!.ganZhi}月）',
+              Text('流日（${_selectedMonth!.ganZhi}月，点选可 AI 分析当日）',
                   style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  for (final d in _flowDays)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                            color: kInkBlack.withValues(alpha: 0.15)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        children: [
-                          Text('${d.date.month}/${d.date.day}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: kInkBlack.withValues(alpha: 0.5),
-                              )),
-                          Text(d.ganZhi,
-                              style: const TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
+                  for (final d in _flowDays) _dayChip(d),
                 ],
               ),
             ],
+            if (_selectedDay != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: Text(
+                    'AI 分析此流日（${_selectedDay!.date.month}/${_selectedDay!.date.day} '
+                    '${_selectedDay!.ganZhi}）'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AiAnalysisPage(
+                      decade: _selectedDecade,
+                      year: _selectedYear,
+                      month: _selectedMonth,
+                      day: _selectedDay,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dayChip(FlowDayData d) {
+    final selected = _selectedDay?.date == d.date;
+    return GestureDetector(
+      onTap: () => _selectDay(d),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected ? kPrimaryRed : Colors.white,
+          border: Border.all(
+            color: selected ? kPrimaryRed : kInkBlack.withValues(alpha: 0.15),
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Text('${d.date.month}/${d.date.day}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: selected
+                      ? kPaperCream.withValues(alpha: 0.8)
+                      : kInkBlack.withValues(alpha: 0.5),
+                )),
+            Text(d.ganZhi,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? kPaperCream : kInkBlack,
+                )),
           ],
         ),
       ),

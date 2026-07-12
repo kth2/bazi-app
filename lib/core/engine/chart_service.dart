@@ -261,34 +261,39 @@ class ChartService {
     );
   }
 
-  /// Interactions between luck pillars (大运/流年) and the natal chart.
-  /// Returns labels like "地支六冲: 大运 巳、日柱 亥".
+  /// Interactions between luck pillars (大运/流年/流月/流日) and the natal
+  /// chart. Returns labels like "地支六冲: 大运 巳、日柱 亥".
   static List<String> luckInteractions(
     ChartResult result, {
     String? decadeGanZhi,
     String? liuNianGanZhi,
+    String? liuYueGanZhi,
+    String? liuRiGanZhi,
   }) {
     final otherStems = <bc.InteractionNode<TianGan>>[];
     final otherBranches = <bc.InteractionNode<DiZhi>>[];
-    if (decadeGanZhi != null && decadeGanZhi.length >= 2) {
-      otherStems.add(bc.InteractionNode(
-          bc.PillarType.decade, TianGan.fromName(decadeGanZhi[0])));
-      otherBranches.add(bc.InteractionNode(
-          bc.PillarType.decade, DiZhi.fromName(decadeGanZhi[1])));
+    void addPillar(bc.PillarType type, String? ganZhi) {
+      if (ganZhi == null || ganZhi.length < 2) return;
+      otherStems.add(bc.InteractionNode(type, TianGan.fromName(ganZhi[0])));
+      otherBranches.add(bc.InteractionNode(type, DiZhi.fromName(ganZhi[1])));
     }
-    if (liuNianGanZhi != null && liuNianGanZhi.length >= 2) {
-      otherStems.add(bc.InteractionNode(
-          bc.PillarType.flowYear, TianGan.fromName(liuNianGanZhi[0])));
-      otherBranches.add(bc.InteractionNode(
-          bc.PillarType.flowYear, DiZhi.fromName(liuNianGanZhi[1])));
-    }
+
+    addPillar(bc.PillarType.decade, decadeGanZhi);
+    addPillar(bc.PillarType.flowYear, liuNianGanZhi);
+    addPillar(bc.PillarType.flowMonth, liuYueGanZhi);
+    addPillar(bc.PillarType.flowDay, liuRiGanZhi);
     if (otherStems.isEmpty && otherBranches.isEmpty) return const [];
 
     final results = result.chart.getInteractionsWith(
       otherStems: otherStems,
       otherBranches: otherBranches,
     );
-    const luckTypes = {bc.PillarType.decade, bc.PillarType.flowYear};
+    const luckTypes = {
+      bc.PillarType.decade,
+      bc.PillarType.flowYear,
+      bc.PillarType.flowMonth,
+      bc.PillarType.flowDay,
+    };
     return [
       for (final r in results)
         if (r.nodes.any((n) => luckTypes.contains(n.pillar)))

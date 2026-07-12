@@ -107,7 +107,44 @@ class BaziAnalysisService {
           DecadeData decade, FlowYearData year) =>
       _analyze(chart, rules, decade: decade, year: year);
 
-  /// Free-form question answered against the chart + optional 大运/流年 scope.
+  /// 流月分析 (with its 大运/流年 context) — month-level event forecast.
+  Future<ScopedAnalysis> analyzeLiuYue(ChartResult chart, List<Rule> rules,
+          DecadeData decade, FlowYearData year, FlowMonthData month) =>
+      _analyze(chart, rules, decade: decade, year: year, month: month);
+
+  /// 流日分析 (with its 大运/流年/流月 context) — day-level event forecast.
+  Future<ScopedAnalysis> analyzeLiuRi(ChartResult chart, List<Rule> rules,
+          DecadeData decade, FlowYearData year, FlowMonthData month,
+          FlowDayData day) =>
+      _analyze(chart, rules, decade: decade, year: year, month: month,
+          day: day);
+
+  /// Human-readable scope label; also part of the cache key, so it must be
+  /// deterministic for a given selection.
+  static String scopeLabel({
+    DecadeData? decade,
+    FlowYearData? year,
+    FlowMonthData? month,
+    FlowDayData? day,
+  }) {
+    if (day != null) {
+      final d = day.date;
+      final ymd = '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}';
+      return '流日 $ymd ${day.ganZhi}';
+    }
+    if (month != null && year != null) {
+      return '流月 ${year.year}年${month.ganZhi}月（${month.jieName}）';
+    }
+    if (year != null) return '流年 ${year.year} ${year.ganZhi}';
+    if (decade != null) {
+      return '大运 ${decade.ganZhi}（${decade.startAge}-${decade.endAge}岁）';
+    }
+    return '整体命局';
+  }
+
+  /// Free-form question answered against the chart + optional
+  /// 大运/流年/流月/流日 scope.
   /// Cached per (chart + scope + question) so re-asking is free.
   Future<CustomAnswer> askQuestion(
     ChartResult chart,
@@ -115,12 +152,10 @@ class BaziAnalysisService {
     String question, {
     DecadeData? decade,
     FlowYearData? year,
+    FlowMonthData? month,
+    FlowDayData? day,
   }) async {
-    final scope = year != null
-        ? '流年 ${year.year} ${year.ganZhi}'
-        : decade != null
-            ? '大运 ${decade.ganZhi}（${decade.startAge}-${decade.endAge}岁）'
-            : '整体命局';
+    final scope = scopeLabel(decade: decade, year: year, month: month, day: day);
 
     final normalizedQ = question.trim();
     final cacheKey = 'ai_qa_${chart.baziString}_${chart.input.gender.name}_'
@@ -143,6 +178,8 @@ class BaziAnalysisService {
       question: normalizedQ,
       decade: decade,
       year: year,
+      month: month,
+      day: day,
     );
 
     final settings = await AiSettings.load();
@@ -163,12 +200,10 @@ class BaziAnalysisService {
     List<Rule> rules, {
     DecadeData? decade,
     FlowYearData? year,
+    FlowMonthData? month,
+    FlowDayData? day,
   }) async {
-    final scope = year != null
-        ? '流年 ${year.year} ${year.ganZhi}'
-        : decade != null
-            ? '大运 ${decade.ganZhi}（${decade.startAge}-${decade.endAge}岁）'
-            : '整体命局';
+    final scope = scopeLabel(decade: decade, year: year, month: month, day: day);
 
     final cacheKey = 'ai_cache_${chart.baziString}_'
         '${chart.input.gender.name}_$scope';
@@ -190,6 +225,8 @@ class BaziAnalysisService {
       examples: similar,
       decade: decade,
       year: year,
+      month: month,
+      day: day,
     );
 
     final settings = await AiSettings.load();

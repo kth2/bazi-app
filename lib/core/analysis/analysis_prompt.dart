@@ -21,7 +21,8 @@ class AnalysisPrompt {
 - 断应期：某干支之气「走完、被克、被合」即为应期；合就是拘绊，功能发挥不出；流年流月由外到内切入，注意连锁反应（甲被合则乙出、乙被克则甲复出，吉凶随之翻转）。
 ''';
 
-  /// [decade]/[year] null → whole-life analysis.
+  /// [decade]/[year]/[month]/[day] null → whole-life analysis. Deeper
+  /// scopes require the shallower ones (day → month → year → decade).
   static String build({
     required ChartResult chart,
     required ChartPattern pattern,
@@ -29,6 +30,8 @@ class AnalysisPrompt {
     required List<AnalysisExample> examples,
     DecadeData? decade,
     FlowYearData? year,
+    FlowMonthData? month,
+    FlowDayData? day,
   }) {
     final buf = StringBuffer();
     _writeContext(buf,
@@ -37,11 +40,21 @@ class AnalysisPrompt {
         ruleMatches: ruleMatches,
         examples: examples,
         decade: decade,
-        year: year);
+        year: year,
+        month: month,
+        day: day);
 
     buf.writeln();
-    buf.writeln('按以下4个类别提供详细分析（使用古典原理，指出用神/忌神/格局变化，');
-    buf.writeln('每类预测1-2个可能事件并给出触发依据，如某支被引动、某干争合）：');
+    if (day != null) {
+      buf.writeln('按以下4个类别分析此流日（结合原局、大运、流年、流月、流日五层干支的');
+      buf.writeln('生克合冲，每类断出当日最可能发生的具体事件或征兆，并给出触发依据）：');
+    } else if (month != null) {
+      buf.writeln('按以下4个类别分析此流月（结合原局、大运、流年、流月四层干支的作用，');
+      buf.writeln('每类预测1-3个本月内可能发生的具体事件并给出触发依据，如某支被引动、某干争合）：');
+    } else {
+      buf.writeln('按以下4个类别提供详细分析（使用古典原理，指出用神/忌神/格局变化，');
+      buf.writeln('每类预测1-2个可能事件并给出触发依据，如某支被引动、某干争合）：');
+    }
     buf.writeln('1. 事业财富');
     buf.writeln('2. 婚姻感情');
     buf.writeln('3. 学习/发展');
@@ -49,7 +62,18 @@ class AnalysisPrompt {
     buf.writeln();
     buf.writeln('要求：');
     buf.writeln('- 语言自然、专业，像真实命理师批八字一样，风格贴近上方案例');
-    buf.writeln('- 先讲原局格局如何被此运/此年影响（成格增益或破格受损），再落到具体人事');
+    if (day != null) {
+      buf.writeln('- 先讲此流日干支与原局用神忌神的作用关系（引动、合绊、冲开），再落到当日具体人事');
+      buf.writeln('- 明确指出当日吉凶程度与最可能的事件类型（如签约、面试、口角、破财、身体不适），');
+      buf.writeln('  并给出当日宜忌建议（宜做什么、忌做什么）');
+      buf.writeln('- 事件预测须与流月流年大势一致：流日只是引动应期，大事以流月流年为纲');
+    } else if (month != null) {
+      buf.writeln('- 先讲此流月干支如何引动流年与原局（成格增益或破格受损），再落到本月具体人事');
+      buf.writeln('- 每个预测事件指出最可能的应期日（何种干支之日易触发，如逢冲之日、逢合之日），');
+      buf.writeln('  便于当月择日趋吉避凶');
+    } else {
+      buf.writeln('- 先讲原局格局如何被此运/此年影响（成格增益或破格受损），再落到具体人事');
+    }
     buf.writeln('- 若命局有特殊场景（如印绶被财破、伤官见官、比劫合官），必须点明并');
     buf.writeln('  参照案例中同类格局的处理方式给出细腻论断');
     buf.writeln('- 输出格式：四个部分以「一、事业财富」「二、婚姻感情」「三、学习/发展」');
@@ -68,6 +92,8 @@ class AnalysisPrompt {
     required String question,
     DecadeData? decade,
     FlowYearData? year,
+    FlowMonthData? month,
+    FlowDayData? day,
   }) {
     final buf = StringBuffer();
     _writeContext(buf,
@@ -76,7 +102,9 @@ class AnalysisPrompt {
         ruleMatches: ruleMatches,
         examples: examples,
         decade: decade,
-        year: year);
+        year: year,
+        month: month,
+        day: day);
 
     buf.writeln();
     buf.writeln('【用户问题】');
@@ -95,7 +123,7 @@ class AnalysisPrompt {
   }
 
   /// Shared context block: persona + examples + Hu Yiming notes + chart +
-  /// pattern + rule hits + 大运/流年 luck interactions.
+  /// pattern + rule hits + 大运/流年/流月/流日 luck interactions.
   static void _writeContext(
     StringBuffer buf, {
     required ChartResult chart,
@@ -104,6 +132,8 @@ class AnalysisPrompt {
     required List<AnalysisExample> examples,
     DecadeData? decade,
     FlowYearData? year,
+    FlowMonthData? month,
+    FlowDayData? day,
   }) {
     buf.writeln('你是一位经验丰富的八字命理师，以《子平真诠》格局法论命：用神专求月令，');
     buf.writeln('先定格局，再看成败，忌以单纯身强身弱套论。参考以下真实案例的分析风格和逻辑：');
@@ -133,6 +163,8 @@ class AnalysisPrompt {
         chart,
         decadeGanZhi: _ganZhiOnly(decade.ganZhi),
         liuNianGanZhi: year == null ? null : _ganZhiOnly(year.ganZhi),
+        liuYueGanZhi: month == null ? null : _ganZhiOnly(month.ganZhi),
+        liuRiGanZhi: day == null ? null : _ganZhiOnly(day.ganZhi),
       );
       buf.writeln();
       buf.writeln('当前大运: ${decade.ganZhi}（${decade.startAge}-${decade.endAge}岁，'
@@ -142,8 +174,17 @@ class AnalysisPrompt {
         buf.writeln('当前流年: ${year.year}年 ${year.ganZhi}（${year.age}岁，'
             '天干${year.ganShiShen}）');
       }
+      if (month != null) {
+        buf.writeln('当前流月: ${month.ganZhi}月（${month.jieName}起，'
+            '${_fmtDate(month.start)}至${_fmtDate(month.end)}，'
+            '天干${month.ganShiShen}）');
+      }
+      if (day != null) {
+        buf.writeln('当前流日: ${_fmtDate(day.date)} ${day.ganZhi}日'
+            '（天干${day.ganShiShen}）');
+      }
       if (inter.isNotEmpty) {
-        buf.writeln('此运/年与原局的干支作用: ${inter.join('；')}');
+        buf.writeln('此运/年/月/日与原局的干支作用: ${inter.join('；')}');
       }
     } else {
       buf.writeln();
@@ -158,4 +199,7 @@ class AnalysisPrompt {
 
   /// '乙亥' from strings that may carry extra text.
   static String _ganZhiOnly(String s) => s.length >= 2 ? s.substring(0, 2) : s;
+
+  static String _fmtDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
