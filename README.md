@@ -7,6 +7,7 @@ A Bazi (八字) four-pillar chart calculator and analysis app, built with Flutte
 ## Features
 
 - **排盘**: four pillars from solar or lunar birth date, true solar time correction by birth location, 十神, 藏干, 纳音, 神煞, 空亡, 命宫/身宫/胎元
+- **干支直入**: already know the 八字? Enter the four pillars directly (月柱/时柱 options auto-derived via 五虎遁/五鼠遁) and the app reverse-searches 1900-2049 for matching solar dates — no 干支历 lookup needed
 - **五行力量**: weighted element scoring (hidden-stem proportions, 月令 weighting, 旺相休囚死) with 身强/身弱/中和 verdict
 - **岁运**: full 大运 → 流年 → 流月 → 流日 drill-down timeline (jieqi-bounded months)
 - **命理分析**: weighted rule engine (SQLite via drift) with partial-match scoring across 整体命局/财富/事业/学历/婚姻/健康, rules sourced from 渊海子平, 子平真诠, 三命通会
