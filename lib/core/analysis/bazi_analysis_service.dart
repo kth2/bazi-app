@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/ai_service.dart';
@@ -88,10 +89,46 @@ class CustomAnswer {
 /// Orchestrates: rule scoring → pattern detection → example matching →
 /// AI call → section parsing, with local caching to protect free-tier quota.
 class BaziAnalysisService {
+  /// Bumped whenever any deterministic reasoning layer (PatternDetector,
+  /// NatalStructure, EvidenceEngine, activation/应期) changes shape.
+  ///
+  /// Cached AI text is the *output* of a specific engine version, so a bump
+  /// must invalidate it — otherwise an engine improvement is invisible to
+  /// anyone who already ran the analysis once.
+  static const int kEngineVersion = 2;
+
+  static String _cachePrefix(String kind) => 'ai_${kind}_v${kEngineVersion}_';
+
+  /// Any key this class has ever written, across engine versions.
+  static const List<String> _legacyPrefixes = ['ai_cache_', 'ai_qa_'];
+
+  static bool _purgedStaleCaches = false;
+
   final ExampleRepository examples;
   final AiService ai;
 
   BaziAnalysisService({required this.examples, required this.ai});
+
+  /// Drops entries written by a different engine version (including the
+  /// original unversioned keys). Runs once per process.
+  static Future<void> _purgeStaleCaches(SharedPreferences prefs) async {
+    if (_purgedStaleCaches) return;
+    _purgedStaleCaches = true;
+    final current = [_cachePrefix('cache'), _cachePrefix('qa')];
+    for (final k in prefs.getKeys().toList()) {
+      final isOurs = _legacyPrefixes.any(k.startsWith);
+      if (isOurs && !current.any(k.startsWith)) {
+        await prefs.remove(k);
+      }
+    }
+  }
+
+  /// Runs the purge regardless of the once-per-process guard.
+  @visibleForTesting
+  static Future<void> purgeStaleCachesForTesting(SharedPreferences prefs) {
+    _purgedStaleCaches = false;
+    return _purgeStaleCaches(prefs);
+  }
 
   /// 整体命局 whole-life analysis.
   Future<ScopedAnalysis> analyzeLife(ChartResult chart, List<Rule> rules) =>
@@ -158,9 +195,10 @@ class BaziAnalysisService {
     final scope = scopeLabel(decade: decade, year: year, month: month, day: day);
 
     final normalizedQ = question.trim();
-    final cacheKey = 'ai_qa_${chart.baziString}_${chart.input.gender.name}_'
-        '${scope}_${normalizedQ.hashCode}';
+    final cacheKey = '${_cachePrefix('qa')}${chart.baziString}_'
+        '${chart.input.gender.name}_${scope}_${normalizedQ.hashCode}';
     final prefs = await SharedPreferences.getInstance();
+    await _purgeStaleCaches(prefs);
     final cached = prefs.getString(cacheKey);
     if (cached != null) {
       return CustomAnswer.fromJson(jsonDecode(cached) as Map<String, dynamic>);
@@ -205,9 +243,10 @@ class BaziAnalysisService {
   }) async {
     final scope = scopeLabel(decade: decade, year: year, month: month, day: day);
 
-    final cacheKey = 'ai_cache_${chart.baziString}_'
+    final cacheKey = '${_cachePrefix('cache')}${chart.baziString}_'
         '${chart.input.gender.name}_$scope';
     final prefs = await SharedPreferences.getInstance();
+    await _purgeStaleCaches(prefs);
     final cached = prefs.getString(cacheKey);
     if (cached != null) {
       return ScopedAnalysis.fromJson(
@@ -289,7 +328,10 @@ class BaziAnalysisService {
   static Future<void> clearCacheFor(ChartResult chart) async {
     final prefs = await SharedPreferences.getInstance();
     final bazi = chart.baziString;
-    final prefixes = ['ai_cache_${bazi}_', 'ai_qa_${bazi}_'];
+    final prefixes = [
+      '${_cachePrefix('cache')}${bazi}_',
+      '${_cachePrefix('qa')}${bazi}_',
+    ];
     for (final k in prefs
         .getKeys()
         .where((k) => prefixes.any(k.startsWith))
