@@ -1,6 +1,7 @@
 import 'package:bazi_core/bazi_core.dart' as bc;
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart';
 
+import '../analysis/temporal_context.dart';
 import '../models/birth_input.dart';
 import '../models/chart_result.dart';
 import 'element_strength.dart';
@@ -263,7 +264,13 @@ class ChartService {
 
   /// Interactions between luck pillars (大运/流年/流月/流日) and the natal
   /// chart. Returns labels like "地支六冲: 大运 巳、日柱 亥".
-  static List<String> luckInteractions(
+  /// Structured 干支 interactions for the given 岁运 selection.
+  ///
+  /// Includes natal-internal relationships as well as those the 大运/流年/
+  /// 流月/流日 pillars form with the chart, each party tagged with the layer
+  /// it came from and its 十神. The reasoning layers consume this; the string
+  /// form below is display only.
+  static List<LuckInteraction> structuredInteractions(
     ChartResult result, {
     String? decadeGanZhi,
     String? liuNianGanZhi,
@@ -282,31 +289,203 @@ class ChartService {
     addPillar(bc.PillarType.flowYear, liuNianGanZhi);
     addPillar(bc.PillarType.flowMonth, liuYueGanZhi);
     addPillar(bc.PillarType.flowDay, liuRiGanZhi);
-    if (otherStems.isEmpty && otherBranches.isEmpty) return const [];
 
     final results = result.chart.getInteractionsWith(
       otherStems: otherStems,
       otherBranches: otherBranches,
     );
-    const luckTypes = {
-      bc.PillarType.decade,
-      bc.PillarType.flowYear,
-      bc.PillarType.flowMonth,
-      bc.PillarType.flowDay,
-    };
+    final dayMaster = result.chart.bazi.day.gan;
+
     return [
       for (final r in results)
-        if (r.nodes.any((n) => luckTypes.contains(n.pillar)))
-          '${kInteractionLabels[r.type] ?? r.type.name}: '
-              '${r.nodes.map((n) => '${kPillarTypeLabels[n.pillar] ?? n.pillar.name} ${_nodeLabel(n.value)}').join('、')}'
-              '${r.combinedWuXing != null ? '（化${kWuXingLabels[r.combinedWuXing]}）' : ''}',
+        LuckInteraction(
+          type: kInteractionLabels[r.type] ?? r.type.name,
+          kind: _interactionKind(r.type),
+          combinedWuXing:
+              r.combinedWuXing == null ? null : kWuXingLabels[r.combinedWuXing],
+          parties: [
+            for (final n in r.nodes) _party(n, dayMaster),
+          ],
+        ),
     ];
+  }
+
+  static InteractionParty _party(bc.InteractionNode n, TianGan dayMaster) {
+    final layer = _layerOf(n.pillar);
+    final position = kPillarTypeLabels[n.pillar] ?? n.pillar.name;
+    final value = n.value;
+    if (value is TianGan) {
+      final isDayMasterStem =
+          n.pillar == bc.PillarType.day && value == dayMaster;
+      return InteractionParty(
+        layer: layer,
+        position: position,
+        value: value.label,
+        isStem: true,
+        shiShen: isDayMasterStem
+            ? null
+            : kShiShenLabels[bc.Relationship.getShiShen(dayMaster, value)],
+      );
+    }
+    if (value is DiZhi) {
+      final cangGan = bc.BaziTable.getCangGan(value);
+      return InteractionParty(
+        layer: layer,
+        position: position,
+        value: value.label,
+        isStem: false,
+        shiShen: cangGan.isEmpty
+            ? null
+            : kShiShenLabels[
+                bc.Relationship.getShiShen(dayMaster, cangGan.first)],
+      );
+    }
+    return InteractionParty(
+      layer: layer,
+      position: position,
+      value: value.toString(),
+      isStem: false,
+    );
   }
 
   static String _nodeLabel(dynamic value) {
     if (value is TianGan) return value.label;
     if (value is DiZhi) return value.label;
     return value.toString();
+  }
+
+  static TemporalLayer _layerOf(bc.PillarType type) => switch (type) {
+        bc.PillarType.decade => TemporalLayer.decade,
+        bc.PillarType.flowYear => TemporalLayer.year,
+        bc.PillarType.flowMonth => TemporalLayer.month,
+        bc.PillarType.flowDay || bc.PillarType.flowHour => TemporalLayer.day,
+        _ => TemporalLayer.natal,
+      };
+
+  /// What the relationship *does*, as opposed to what it is called.
+  static InteractionKind _interactionKind(bc.BaziInteraction type) =>
+      switch (type) {
+        bc.BaziInteraction.stemCombination ||
+        bc.BaziInteraction.branchCombination =>
+          InteractionKind.combination,
+        bc.BaziInteraction.branchTripleCombination ||
+        bc.BaziInteraction.branchTripleDirection ||
+        bc.BaziInteraction.branchHalfCombination ||
+        bc.BaziInteraction.branchArchingCombination =>
+          InteractionKind.formation,
+        bc.BaziInteraction.stemClash || bc.BaziInteraction.branchClash =>
+          InteractionKind.clash,
+        bc.BaziInteraction.branchTriplePunishment ||
+        bc.BaziInteraction.branchPunishment ||
+        bc.BaziInteraction.branchSelfPunishment =>
+          InteractionKind.punishment,
+        bc.BaziInteraction.branchHarm ||
+        bc.BaziInteraction.branchDestruction =>
+          InteractionKind.erosion,
+        bc.BaziInteraction.stemRestraint => InteractionKind.restraint,
+        bc.BaziInteraction.branchHiddenCombination ||
+        bc.BaziInteraction.branchSeverance =>
+          InteractionKind.other,
+      };
+
+  /// Assemble the full temporal context for a scope selection.
+  static TemporalContext temporalContext(
+    ChartResult result, {
+    DecadeData? decade,
+    FlowYearData? year,
+    FlowMonthData? month,
+    FlowDayData? day,
+  }) {
+    String? gz(String? s) =>
+        s == null ? null : (s.length >= 2 ? s.substring(0, 2) : s);
+    return TemporalContext(
+      chart: result,
+      decade: decade,
+      year: year,
+      month: month,
+      day: day,
+      luckPillars: [
+        if (decade != null)
+          _temporalPillar(result, TemporalLayer.decade, gz(decade.ganZhi)!,
+              '大运 ${decade.ganZhi}（${decade.startAge}-${decade.endAge}岁）'),
+        if (year != null)
+          _temporalPillar(result, TemporalLayer.year, gz(year.ganZhi)!,
+              '流年 ${year.year}年 ${year.ganZhi}'),
+        if (month != null)
+          _temporalPillar(result, TemporalLayer.month, gz(month.ganZhi)!,
+              '流月 ${month.ganZhi}月（${month.jieName}）'),
+        if (day != null)
+          _temporalPillar(result, TemporalLayer.day, gz(day.ganZhi)!,
+              '流日 ${_fmt2(day.date)} ${day.ganZhi}'),
+      ],
+      interactions: structuredInteractions(
+        result,
+        decadeGanZhi: gz(decade?.ganZhi),
+        liuNianGanZhi: gz(year?.ganZhi),
+        liuYueGanZhi: gz(month?.ganZhi),
+        liuRiGanZhi: gz(day?.ganZhi),
+      ),
+    );
+  }
+
+  /// Annotates a 岁运 ganzhi with the same 十神/五行 detail a natal pillar
+  /// carries, so downstream layers can treat both alike.
+  static TemporalPillar _temporalPillar(
+    ChartResult result,
+    TemporalLayer layer,
+    String ganZhi,
+    String label,
+  ) {
+    final dayMaster = result.chart.bazi.day.gan;
+    final gan = TianGan.fromName(ganZhi[0]);
+    final zhi = DiZhi.fromName(ganZhi[1]);
+    final hidden = bc.BaziTable.getCangGan(zhi);
+    String ss(TianGan g) =>
+        kShiShenLabels[bc.Relationship.getShiShen(dayMaster, g)] ?? '';
+    return TemporalPillar(
+      layer: layer,
+      ganZhi: ganZhi,
+      ganShiShen: ss(gan),
+      zhiMainShiShen: hidden.isEmpty ? '' : ss(hidden.first),
+      zhiHiddenShiShen: [for (final h in hidden) ss(h)],
+      ganWuXing: kWuXingLabels[bc.BaziTable.getWuXingOfGan(gan)] ?? '',
+      zhiWuXing: kWuXingLabels[bc.BaziTable.getWuXingOfZhi(zhi)] ?? '',
+      label: label,
+    );
+  }
+
+  static String _fmt2(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  /// Display-only string form of the 岁运 interactions (natal-internal ones
+  /// excluded, since the chart already lists those).
+  static List<String> luckInteractions(
+    ChartResult result, {
+    String? decadeGanZhi,
+    String? liuNianGanZhi,
+    String? liuYueGanZhi,
+    String? liuRiGanZhi,
+  }) {
+    if (decadeGanZhi == null &&
+        liuNianGanZhi == null &&
+        liuYueGanZhi == null &&
+        liuRiGanZhi == null) {
+      return const [];
+    }
+    return [
+      for (final i in structuredInteractions(
+        result,
+        decadeGanZhi: decadeGanZhi,
+        liuNianGanZhi: liuNianGanZhi,
+        liuYueGanZhi: liuYueGanZhi,
+        liuRiGanZhi: liuRiGanZhi,
+      ))
+        if (i.involvesLuck)
+          '${i.type}: '
+              '${i.parties.map((p) => '${p.position} ${p.value}').join('、')}'
+              '${i.combinedWuXing != null ? '（化${i.combinedWuXing}）' : ''}',
+    ];
   }
 
   static DateTime _toDateTime(AstroDateTime adt) =>

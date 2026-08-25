@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/ai_service.dart';
+import '../engine/chart_service.dart';
 import '../models/chart_result.dart';
 import '../rules/rule.dart';
 import '../rules/rule_engine.dart';
@@ -204,8 +205,10 @@ class BaziAnalysisService {
       return CustomAnswer.fromJson(jsonDecode(cached) as Map<String, dynamic>);
     }
 
+    final context = ChartService.temporalContext(chart,
+        decade: decade, year: year, month: month, day: day);
     final pattern = PatternDetector.detect(chart);
-    final ruleMatches = RuleEngine.evaluate(chart, rules);
+    final ruleMatches = RuleEngine.evaluate(chart, rules, context: context);
     final similar = await examples.findSimilar(pattern.tags);
 
     final prompt = AnalysisPrompt.buildCustom(
@@ -253,8 +256,10 @@ class BaziAnalysisService {
           jsonDecode(cached) as Map<String, dynamic>);
     }
 
+    final context = ChartService.temporalContext(chart,
+        decade: decade, year: year, month: month, day: day);
     final pattern = PatternDetector.detect(chart);
-    final ruleMatches = RuleEngine.evaluate(chart, rules);
+    final ruleMatches = RuleEngine.evaluate(chart, rules, context: context);
     final similar = await examples.findSimilar(pattern.tags);
 
     final prompt = AnalysisPrompt.build(
