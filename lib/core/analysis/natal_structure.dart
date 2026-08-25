@@ -142,6 +142,19 @@ class NatalStructure {
   /// Presence/strength/operability of each 十神 group.
   final Map<String, ShiShenPresence> presence;
 
+  /// 顺用 (吉神，生之护之) or 逆用 (凶神，制之化之).
+  final bool shunYong;
+
+  /// The 十神 group the 格 itself is made of, when there is one.
+  final String? geShenGroup;
+
+  /// 十神 that break this 格, whether or not they appear in the natal chart.
+  ///
+  /// A 正官格 is broken by 伤官 and by 七杀混杂 even when neither is present
+  /// at birth — if 岁运 brings one, that is a 破格 event, so the stance
+  /// lookup has to know about breakers the chart itself never had.
+  final List<String> geJuBreakers;
+
   const NatalStructure({
     required this.pattern,
     required this.status,
@@ -153,7 +166,38 @@ class NatalStructure {
     required this.jiShen,
     required this.tiaoHou,
     required this.presence,
+    this.shunYong = true,
+    this.geShenGroup,
+    this.geJuBreakers = const [],
   });
+
+  /// 喜忌 for a 十神 group: 1 喜 / -1 忌 / 0 中性.
+  ///
+  /// This is the single place the rest of the engine asks "is this good for
+  /// this chart", so that judgement stays tied to the 格局 rather than being
+  /// re-derived ad hoc from 身强身弱.
+  /// Accepts either a specific 十神 (七杀) or a group (官杀). The specific
+  /// name is checked first, since 七杀 arriving on a 正官格 is 混杂 even
+  /// though the group as a whole is the 格神.
+  int stanceOf(String nameOrGroup) {
+    if (jiShen.contains(nameOrGroup)) return -1;
+    if (geJuBreakers.contains(nameOrGroup)) return -1;
+    if (xiangShen.contains(nameOrGroup)) return 1;
+
+    final group =
+        NatalStructureResolver.groupOfShiShen(nameOrGroup) ?? nameOrGroup;
+    if (jiShen.contains(group)) return -1;
+    if (xiangShen.contains(group)) return 1;
+    if (group == geShenGroup) {
+      // 顺用之格神宜旺，逆用之格神宜制.
+      return shunYong ? 1 : -1;
+    }
+    return 0;
+  }
+
+  /// Whether a 五行 is wanted for 调候.
+  bool needsForTiaoHou(String element) =>
+      !tiaoHou.satisfied && tiaoHou.needed.contains(element);
 
   String get summary {
     final buf = StringBuffer()
@@ -431,6 +475,9 @@ class NatalStructureResolver {
       jiShen: jiShen,
       tiaoHou: tiaoHou,
       presence: presence,
+      shunYong: spec.shunYong,
+      geShenGroup: geShen,
+      geJuBreakers: spec.breakers.keys.toList(),
     );
   }
 
@@ -485,6 +532,7 @@ class NatalStructureResolver {
       jiShen: enemies,
       tiaoHou: tiaoHou,
       presence: presence,
+      geShenGroup: target,
     );
   }
 
@@ -528,6 +576,15 @@ class NatalStructureResolver {
 
   /// 格神太旺 — past this share the 格 needs draining or checking, not feeding.
   static const double _excessiveStrength = 40;
+
+  /// The group a specific 十神 belongs to (七杀 → 官杀). Null for a name
+  /// that is already a group, or unknown.
+  static String? groupOfShiShen(String shiShen) {
+    for (final entry in _groupMembers.entries) {
+      if (entry.value.contains(shiShen)) return entry.key;
+    }
+    return null;
+  }
 
   static ShiShenPresence? _lookup(
       Map<String, ShiShenPresence> presence, String name) {
