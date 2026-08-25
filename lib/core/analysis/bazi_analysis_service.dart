@@ -4,13 +4,11 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/ai_service.dart';
-import '../engine/chart_service.dart';
 import '../models/chart_result.dart';
 import '../rules/rule.dart';
-import '../rules/rule_engine.dart';
 import 'analysis_prompt.dart';
 import 'example_repository.dart';
-import 'pattern_detector.dart';
+import 'reasoning_report.dart';
 
 /// One AI analysis result, split into the 4 life categories.
 class ScopedAnalysis {
@@ -96,7 +94,7 @@ class BaziAnalysisService {
   /// Cached AI text is the *output* of a specific engine version, so a bump
   /// must invalidate it — otherwise an engine improvement is invisible to
   /// anyone who already ran the analysis once.
-  static const int kEngineVersion = 2;
+  static const int kEngineVersion = 3;
 
   static String _cachePrefix(String kind) => 'ai_${kind}_v${kEngineVersion}_';
 
@@ -205,22 +203,14 @@ class BaziAnalysisService {
       return CustomAnswer.fromJson(jsonDecode(cached) as Map<String, dynamic>);
     }
 
-    final context = ChartService.temporalContext(chart,
+    final report = ReasoningReport.build(chart, rules,
         decade: decade, year: year, month: month, day: day);
-    final pattern = PatternDetector.detect(chart);
-    final ruleMatches = RuleEngine.evaluate(chart, rules, context: context);
-    final similar = await examples.findSimilar(pattern.tags);
+    final similar = await examples.findMatches(report.pattern.tags);
 
     final prompt = AnalysisPrompt.buildCustom(
-      chart: chart,
-      pattern: pattern,
-      ruleMatches: ruleMatches,
+      report: report,
       examples: similar,
       question: normalizedQ,
-      decade: decade,
-      year: year,
-      month: month,
-      day: day,
     );
 
     final settings = await AiSettings.load();
@@ -230,7 +220,7 @@ class BaziAnalysisService {
       question: normalizedQ,
       scope: scope,
       answer: response.trim(),
-      patternSummary: pattern.summary,
+      patternSummary: report.structure.summary,
     );
     await prefs.setString(cacheKey, jsonEncode(result.toJson()));
     return result;
@@ -256,21 +246,13 @@ class BaziAnalysisService {
           jsonDecode(cached) as Map<String, dynamic>);
     }
 
-    final context = ChartService.temporalContext(chart,
+    final report = ReasoningReport.build(chart, rules,
         decade: decade, year: year, month: month, day: day);
-    final pattern = PatternDetector.detect(chart);
-    final ruleMatches = RuleEngine.evaluate(chart, rules, context: context);
-    final similar = await examples.findSimilar(pattern.tags);
+    final similar = await examples.findMatches(report.pattern.tags);
 
     final prompt = AnalysisPrompt.build(
-      chart: chart,
-      pattern: pattern,
-      ruleMatches: ruleMatches,
+      report: report,
       examples: similar,
-      decade: decade,
-      year: year,
-      month: month,
-      day: day,
     );
 
     final settings = await AiSettings.load();
@@ -279,8 +261,8 @@ class BaziAnalysisService {
     final result = _parse(
       response,
       scope: scope,
-      citedIds: similar.map((e) => e.id).toList(),
-      patternSummary: pattern.summary,
+      citedIds: [for (final m in similar) m.example.id],
+      patternSummary: report.structure.summary,
     );
     await prefs.setString(cacheKey, jsonEncode(result.toJson()));
     return result;

@@ -25,7 +25,7 @@ extension ActivationEffectX on ActivationEffect {
         ActivationEffect.strengthen => '增强',
         ActivationEffect.release => '冲开引动',
         ActivationEffect.bind => '合绊',
-        ActivationEffect.damage => '刑伤',
+        ActivationEffect.damage => '刑害损伤',
         ActivationEffect.weaken => '克制',
       };
 
@@ -211,7 +211,7 @@ class LuckActivationEngine {
             effect: effect,
             intensity: intensity,
             stance: effect.polarity * stance,
-            mechanism: '${i.type} ${i.description}'
+            mechanism: '${i.description}'
                 '——${party.position}之$group被${effect.label}',
           ));
         }
