@@ -107,6 +107,116 @@ void main() {
     });
   });
 
+  group('the AI Q&A conversation is recorded as checkable claims', () {
+    const q1 = '甲辰年最可能发生哪件事？1读博毕业 2感情重挫 3官非牢狱';
+    const a1 = '答案：第1项。原局印星有力，流年引动文书之气…';
+    const q2 = '今年适合换工作吗？';
+    const a2 = '流年冲提纲，主职务变动，宜守不宜攻。';
+
+    CaseRecord withQa() {
+      final report = yearReport();
+      return CaseRecord.fromReport(
+        report,
+        id: 'c1',
+        title: '测试案例',
+        scopeLabel: '流年 2026 丙午',
+        engineVersion: 3,
+        createdAt: DateTime(2026, 3, 1),
+        reviewDueAt: CaseRecord.scopeEndOf(report.context),
+        qa: const [(q1, a1), (q2, a2)],
+      );
+    }
+
+    test('questions and answers are both stored, in order asked', () {
+      final qa =
+          withQa().claims.where((c) => c.kind == ClaimKind.qa).toList();
+      expect(qa.length, 2);
+      expect(qa[0].title, q1);
+      expect(qa[0].detail, a1);
+      expect(qa[1].title, q2);
+      expect(qa[1].detail, a2);
+    });
+
+    test('each question is verifiable like any other claim', () {
+      var c = withQa();
+      final qaClaim = c.claims.firstWhere((k) => k.kind == ClaimKind.qa);
+      expect(qaClaim.verdict, ClaimVerdict.unverified);
+
+      c = c.copyWith(claims: [
+        for (final k in c.claims)
+          k.id == qaClaim.id
+              ? k.copyWith(verdict: ClaimVerdict.hit, note: '确实毕业了')
+              : k,
+      ]);
+      final saved = c.claims.firstWhere((k) => k.id == qaClaim.id);
+      expect(saved.verdict, ClaimVerdict.hit);
+      expect(saved.note, '确实毕业了');
+      expect(c.hitRate, 1.0);
+    });
+
+    test('question ids are stable across processes', () {
+      // Persisted, so they cannot depend on String.hashCode.
+      expect(CaseRecord.qaIdFor(q1), CaseRecord.qaIdFor(q1));
+      expect(CaseRecord.qaIdFor(q1), isNot(CaseRecord.qaIdFor(q2)));
+      // Surrounding whitespace must not fork the identity.
+      expect(CaseRecord.qaIdFor('  $q1  '), CaseRecord.qaIdFor(q1));
+    });
+
+    test('merging adds only genuinely new questions', () {
+      final c = withQa();
+      expect(c.newQaCount(const [(q1, a1), (q2, a2)]), 0);
+      expect(c.newQaCount(const [(q1, a1), ('第三个问题？', '答')]), 1);
+
+      final merged = c.withQa(const [(q1, a1), ('第三个问题？', '答')]);
+      expect(merged.claims.length, c.claims.length + 1);
+      expect(
+        merged.claims.where((k) => k.kind == ClaimKind.qa).map((k) => k.title),
+        containsAll([q1, q2, '第三个问题？']),
+      );
+    });
+
+    test('merging never discards a verdict already filled in', () {
+      // Questions get asked after a case is saved, so a repeat save merges.
+      // That must not reset review work on the questions already there.
+      var c = withQa();
+      final first = c.claims.firstWhere((k) => k.kind == ClaimKind.qa);
+      c = c.copyWith(claims: [
+        for (final k in c.claims)
+          k.id == first.id
+              ? k.copyWith(verdict: ClaimVerdict.partial, note: '部分说中')
+              : k,
+      ]);
+
+      final merged = c.withQa(const [(q1, '一个不同的答案'), ('新问题？', '新答案')]);
+      final kept = merged.claims.firstWhere((k) => k.id == first.id);
+      expect(kept.verdict, ClaimVerdict.partial);
+      expect(kept.note, '部分说中');
+      // The original answer is preserved rather than overwritten.
+      expect(kept.detail, a1);
+      expect(merged.claims.any((k) => k.title == '新问题？'), isTrue);
+    });
+
+    test('empty questions are ignored', () {
+      final c = withQa();
+      expect(c.withQa(const [('', 'x'), ('   ', 'y')]).claims.length,
+          c.claims.length);
+    });
+
+    test('Q&A survives a database round-trip', () async {
+      final db = CasesDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      final repo = CaseRepository(db);
+      await repo.save(withQa());
+
+      final loaded = (await repo.byId('c1'))!;
+      final qa =
+          loaded.claims.where((k) => k.kind == ClaimKind.qa).toList();
+      expect(qa.length, 2);
+      expect(qa.first.title, q1);
+      expect(qa.first.detail, a1);
+    });
+  });
+
   group('status tracks the review cycle', () {
     test('pending → awaiting → partial → reviewed', () {
       var c = newCase();

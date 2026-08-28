@@ -17,6 +17,13 @@ enum ClaimKind {
 
   /// A ranked 应期 window.
   yingQi,
+
+  /// A free-form question the user put to the AI, and the answer given.
+  ///
+  /// These are often the sharpest predictions in a reading — "甲辰年最可能
+  /// 发生哪件事" gets a committed answer — so they are recorded as claims in
+  /// their own right rather than as loose transcript.
+  qa,
 }
 
 extension ClaimKindX on ClaimKind {
@@ -24,6 +31,7 @@ extension ClaimKindX on ClaimKind {
         ClaimKind.structure => '格局判定',
         ClaimKind.event => '事件预测',
         ClaimKind.yingQi => '应期窗口',
+        ClaimKind.qa => '问答记录',
       };
 }
 
@@ -365,6 +373,7 @@ class CaseRecord {
     String aiText = '',
     DateTime? createdAt,
     DateTime? reviewDueAt,
+    List<(String question, String answer)> qa = const [],
     int maxEvents = 6,
     int maxWindows = 3,
   }) {
@@ -381,6 +390,8 @@ class CaseRecord {
         _eventClaim(report.events[i], i, reviewDueAt),
       for (var i = 0; i < report.yingQi.windows.length && i < maxWindows; i++)
         _windowClaim(report.yingQi.windows[i], i),
+      for (final (question, answer) in qa)
+        if (question.trim().isNotEmpty) qaClaim(question, answer),
     ];
 
     return CaseRecord(
@@ -438,6 +449,53 @@ class CaseRecord {
         windowStart: w.start,
         windowEnd: w.end,
       );
+
+  /// A stable id for a question, so the same question keeps its verdict
+  /// across re-saves.
+  ///
+  /// Dart's String.hashCode is not guaranteed stable between processes, and
+  /// these ids are persisted, so this uses FNV-1a rather than hashCode.
+  static String qaIdFor(String question) {
+    var hash = 0x811c9dc5;
+    for (final unit in question.trim().codeUnits) {
+      hash ^= unit;
+      hash = (hash * 0x01000193) & 0xFFFFFFFF;
+    }
+    return 'qa_${hash.toRadixString(16)}';
+  }
+
+  static PredictedClaim qaClaim(String question, String answer) =>
+      PredictedClaim(
+        id: qaIdFor(question),
+        kind: ClaimKind.qa,
+        title: question.trim(),
+        detail: answer.trim(),
+      );
+
+  /// Adds any question not already recorded, leaving existing entries — and
+  /// the verdicts already filled in against them — untouched.
+  ///
+  /// Questions can be asked after a case is saved, so merging has to be
+  /// additive; replacing the list wholesale would discard review work.
+  CaseRecord withQa(List<(String question, String answer)> pairs) {
+    final existing = {
+      for (final c in claims)
+        if (c.kind == ClaimKind.qa) c.id,
+    };
+    final additions = <PredictedClaim>[];
+    for (final (question, answer) in pairs) {
+      if (question.trim().isEmpty) continue;
+      final id = qaIdFor(question);
+      if (existing.contains(id) || additions.any((a) => a.id == id)) continue;
+      additions.add(qaClaim(question, answer));
+    }
+    if (additions.isEmpty) return this;
+    return copyWith(claims: [...claims, ...additions]);
+  }
+
+  /// How many of [pairs] are not yet recorded on this case.
+  int newQaCount(List<(String question, String answer)> pairs) =>
+      withQa(pairs).claims.length - claims.length;
 
   static String encodeClaims(List<PredictedClaim> claims) =>
       jsonEncode([for (final c in claims) c.toJson()]);

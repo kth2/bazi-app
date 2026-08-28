@@ -23,6 +23,9 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
   bool _dirty = false;
   bool _loading = true;
 
+  /// Q&A answers are long; they start collapsed.
+  final Set<String> _expandedQa = {};
+
   @override
   void initState() {
     super.initState();
@@ -270,8 +273,53 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
     );
   }
 
+  /// The question/answer body of a 问答 claim.
+  ///
+  /// Rendered as readable prose rather than the small caption used for engine
+  /// basis chains — an AI answer is several paragraphs and is the thing the
+  /// user is actually judging.
+  Widget _qaBody(PredictedClaim claim) {
+    final expanded = _expandedQa.contains(claim.id);
+    final answer = claim.detail;
+    final isLong = answer.length > 240;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: kPrimaryRed.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: SelectableText(
+            answer.isEmpty ? '（无回答）' : answer,
+            maxLines: expanded || !isLong ? null : 4,
+            style: const TextStyle(fontSize: 13, height: 1.7),
+          ),
+        ),
+        if (isLong)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => setState(() {
+                if (expanded) {
+                  _expandedQa.remove(claim.id);
+                } else {
+                  _expandedQa.add(claim.id);
+                }
+              }),
+              child: Text(expanded ? '收起' : '展开全文',
+                  style: const TextStyle(fontSize: 12)),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _claimCard(PredictedClaim claim) {
     final inWindow = claim.landedInWindow;
+    final isQa = claim.kind == ClaimKind.qa;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
@@ -280,7 +328,17 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (isQa)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 6, top: 1),
+                    child: Text('问',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: kPrimaryRed)),
+                  ),
                 Expanded(
                   child: Text(claim.title,
                       style: const TextStyle(
@@ -304,7 +362,10 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
                   style:
                       const TextStyle(fontSize: 11, color: Colors.black54)),
             ],
-            if (claim.detail.isNotEmpty) ...[
+            if (isQa) ...[
+              const SizedBox(height: 8),
+              _qaBody(claim),
+            ] else if (claim.detail.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(claim.detail,
                   style: const TextStyle(
@@ -356,9 +417,9 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
               controller: _notes[claim.id],
               maxLines: 2,
               style: const TextStyle(fontSize: 13),
-              decoration: const InputDecoration(
-                hintText: '实际发生了什么？',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: isQa ? '这个回答后来准不准？' : '实际发生了什么？',
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
               onChanged: (_) => setState(() => _dirty = true),

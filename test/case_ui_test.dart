@@ -187,6 +187,39 @@ void main() {
       expect(saved.lastReviewedAt, isNotNull);
     });
 
+    testWidgets('Q&A is shown as question plus readable answer',
+        (tester) async {
+      const question = '甲辰年最可能发生哪件事？';
+      final store = FakeCaseStore([
+        record(claims: [
+          CaseRecord.qaClaim(question, '答案：第1项。原局印星有力…'),
+        ])
+      ]);
+      await tester.pumpWidget(wrapDetail(store));
+      await tester.pump();
+
+      expect(find.text('问答记录'), findsOneWidget);
+      expect(find.text(question), findsOneWidget);
+      expect(find.textContaining('答案：第1项'), findsOneWidget);
+      // A recorded answer is judged like any other claim.
+      expect(find.text('应验'), findsWidgets);
+    });
+
+    testWidgets('a long answer collapses behind 展开全文', (tester) async {
+      final store = FakeCaseStore([
+        record(claims: [
+          CaseRecord.qaClaim('问题？', 'あ' * 400),
+        ])
+      ]);
+      await tester.pumpWidget(wrapDetail(store));
+      await tester.pump();
+
+      expect(find.text('展开全文'), findsOneWidget);
+      await tester.tap(find.text('展开全文'));
+      await tester.pump();
+      expect(find.text('收起'), findsOneWidget);
+    });
+
     testWidgets('a missing case degrades gracefully', (tester) async {
       await tester.pumpWidget(wrapDetail(FakeCaseStore(const [])));
       await tester.pump();

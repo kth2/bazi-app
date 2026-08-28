@@ -134,6 +134,13 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
     _start();
   }
 
+  /// The Q&A shown on this page, oldest first.
+  ///
+  /// [_answers] is newest-first for display; a saved record reads better in
+  /// the order the conversation actually happened.
+  List<(String, String)> get _qaPairs =>
+      [for (final a in _answers.reversed) (a.question, a.answer)];
+
   /// Snapshots this reading into the case journal so its outcome can be
   /// filled in once the period has passed.
   Future<void> _saveCase(ScopedAnalysis analysis) async {
@@ -149,8 +156,19 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
         scopeLabel: _scopeTitle,
       );
       if (existing != null) {
+        // Questions are often asked after the case was saved, so a repeat
+        // save merges the new ones in rather than reporting a duplicate and
+        // silently dropping them.
+        final merged = existing.withQa(_qaPairs);
+        final added = merged.claims.length - existing.claims.length;
+        if (added > 0) await repo.save(merged);
         if (!mounted) return;
-        _snack('此命局的「$_scopeTitle」已在案例库中', existing.id);
+        _snack(
+          added > 0
+              ? '已补记 $added 条问答到此案例'
+              : '此命局的「$_scopeTitle」已在案例库中',
+          existing.id,
+        );
         return;
       }
 
@@ -171,6 +189,7 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
         engineVersion: BaziAnalysisService.kEngineVersion,
         aiText: analysis.rawText,
         reviewDueAt: CaseRecord.scopeEndOf(report.context),
+        qa: _qaPairs,
       );
       await repo.save(record);
       if (!mounted) return;
@@ -227,7 +246,7 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
                         strokeWidth: 2, color: Colors.white),
                   )
                 : const Icon(Icons.bookmark_add_outlined),
-            tooltip: '存为案例（日后回填实际结果）',
+            tooltip: '存为案例（含问答，日后回填实际结果）',
             onPressed:
                 _latest == null || _savingCase ? null : () => _saveCase(_latest!),
           ),
