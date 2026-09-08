@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/analysis/bazi_analysis_service.dart';
+import '../../core/analysis/reasoning_report.dart';
+import '../../core/cases/case_record.dart';
 import '../../core/models/chart_result.dart';
 import '../../providers/ai_provider.dart';
+import '../../providers/case_provider.dart';
 import '../../providers/analysis_provider.dart';
 import '../../providers/chart_provider.dart';
 import '../../services/ai_service.dart';
 import '../../theme.dart';
+import '../cases/case_detail_page.dart';
 import '../settings/settings_sheet.dart';
 
 /// AI deep analysis for 整体命局 / 大运 / 流年 / 流月 / 流日 —
@@ -30,6 +34,11 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
   final _questionController = TextEditingController();
   final List<CustomAnswer> _answers = [];
   bool _asking = false;
+  bool _savingCase = false;
+
+  /// Set once the analysis resolves, so the 存为案例 action knows what to
+  /// snapshot without reaching back into the FutureBuilder.
+  ScopedAnalysis? _latest;
   String? _qaError;
 
   String get _scopeTitle => BaziAnalysisService.scopeLabel(
@@ -93,6 +102,7 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
     if (chart == null) return;
     final service = ref.read(baziAnalysisServiceProvider);
     setState(() {
+      _latest = null;
       _future = () async {
         final rules = await ref.read(rulesProvider.future);
         if (widget.day != null) {
@@ -111,7 +121,10 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
           return service.analyzeDaYun(chart, rules, widget.decade!);
         }
         return service.analyzeLife(chart, rules);
-      }();
+      }()
+        ..then((a) {
+          if (mounted) setState(() => _latest = a);
+        }).ignore();
     });
   }
 
@@ -119,6 +132,98 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
     final chart = ref.read(chartResultProvider);
     if (chart != null) await BaziAnalysisService.clearCacheFor(chart);
     _start();
+  }
+
+  /// The Q&A shown on this page, oldest first.
+  ///
+  /// [_answers] is newest-first for display; a saved record reads better in
+  /// the order the conversation actually happened.
+  List<(String, String)> get _qaPairs =>
+      [for (final a in _answers.reversed) (a.question, a.answer)];
+
+  /// Snapshots this reading into the case journal so its outcome can be
+  /// filled in once the period has passed.
+  Future<void> _saveCase(ScopedAnalysis analysis) async {
+    if (_savingCase) return;
+    final chart = ref.read(chartResultProvider);
+    if (chart == null) return;
+    setState(() => _savingCase = true);
+    try {
+      final repo = ref.read(caseRepositoryProvider);
+      final existing = await repo.findExisting(
+        baziString: chart.baziString,
+        gender: chart.input.gender,
+        scopeLabel: _scopeTitle,
+      );
+      if (existing != null) {
+        // Questions are often asked after the case was saved, so a repeat
+        // save merges the new ones in rather than reporting a duplicate and
+        // silently dropping them.
+        final merged = existing.withQa(_qaPairs);
+        final added = merged.claims.length - existing.claims.length;
+        if (added > 0) await repo.save(merged);
+        if (!mounted) return;
+        _snack(
+          added > 0
+              ? '已补记 $added 条问答到此案例'
+              : '此命局的「$_scopeTitle」已在案例库中',
+          existing.id,
+        );
+        return;
+      }
+
+      final rules = await ref.read(rulesProvider.future);
+      final report = ReasoningReport.build(
+        chart,
+        rules,
+        decade: widget.decade,
+        year: widget.year,
+        month: widget.month,
+        day: widget.day,
+      );
+      final record = CaseRecord.fromReport(
+        report,
+        id: 'case_${DateTime.now().microsecondsSinceEpoch}',
+        title: '${chart.baziString} · $_scopeTitle',
+        scopeLabel: _scopeTitle,
+        engineVersion: BaziAnalysisService.kEngineVersion,
+        aiText: analysis.rawText,
+        reviewDueAt: CaseRecord.scopeEndOf(report.context),
+        qa: _qaPairs,
+      );
+      await repo.save(record);
+      if (!mounted) return;
+      _snack('已存入案例库，待此${_dueHint(record)}后回填实际结果', record.id);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('保存案例失败：$e')));
+    } finally {
+      if (mounted) setState(() => _savingCase = false);
+    }
+  }
+
+  String _dueHint(CaseRecord r) {
+    if (r.reviewDueAt == null) return '命局验证';
+    final d = r.reviewDueAt!;
+    return '期（至 ${d.year}-${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}）过去';
+  }
+
+  void _snack(String message, String caseId) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: SnackBarAction(
+          label: '查看',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => CaseDetailPage(caseId: caseId),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -132,6 +237,19 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
       appBar: AppBar(
         title: Text('AI 深度分析 · $_scopeTitle'),
         actions: [
+          IconButton(
+            icon: _savingCase
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.bookmark_add_outlined),
+            tooltip: '存为案例（含问答，日后回填实际结果）',
+            onPressed:
+                _latest == null || _savingCase ? null : () => _saveCase(_latest!),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: '重新分析',

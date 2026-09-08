@@ -1,3 +1,5 @@
+import '../analysis/temporal_context.dart';
+
 /// A single matchable condition inside a rule.
 ///
 /// JSON shape: {"type": "...", "value": "...", "position": "...",
@@ -31,6 +33,10 @@ class RuleCondition {
   /// Required conditions must match or the whole rule is discarded.
   final bool required;
 
+  /// Which layer a temporal condition (luck*) reads from. Ignored by natal
+  /// condition types, which always read the 原局.
+  final TemporalLayer layer;
+
   const RuleCondition({
     required this.type,
     this.value,
@@ -41,7 +47,11 @@ class RuleCondition {
     this.threshold = 0,
     this.kinds = const [],
     this.required = false,
+    this.layer = TemporalLayer.natal,
   });
+
+  /// True for condition types that need a [TemporalContext] to evaluate.
+  bool get isTemporal => type.startsWith('luck');
 
   factory RuleCondition.fromJson(Map<String, dynamic> json) => RuleCondition(
         type: json['type'] as String,
@@ -53,6 +63,7 @@ class RuleCondition {
         threshold: (json['threshold'] as num?)?.toDouble() ?? 0,
         kinds: (json['kinds'] as List?)?.cast<String>() ?? const [],
         required: json['required'] as bool? ?? false,
+        layer: temporalLayerFromName(json['layer'] as String?),
       );
 
   Map<String, dynamic> toJson() => {
@@ -65,6 +76,7 @@ class RuleCondition {
         if (threshold != 0) 'threshold': threshold,
         if (kinds.isNotEmpty) 'kinds': kinds,
         if (required) 'required': true,
+        if (layer != TemporalLayer.natal) 'layer': layer.label,
       };
 
   /// Human-readable label shown in the UI for matched conditions.
@@ -100,6 +112,20 @@ class RuleCondition {
         return '$value${op == '>=' ? '偏旺' : '偏弱'}';
       case 'kongWang':
         return '$position落空亡';
+      case 'luckShiShen':
+        return '${layer.label}见$value';
+      case 'luckLacksShiShen':
+        return '${layer.label}无$value';
+      case 'luckInteraction':
+        return position == null
+            ? '${layer.label}$value'
+            : '${layer.label}$value$position';
+      case 'luckKind':
+        return position == null
+            ? '${layer.label}$value原局'
+            : '${layer.label}$value$position';
+      case 'luckElement':
+        return '${layer.label}属$value';
       default:
         return type;
     }
@@ -117,6 +143,21 @@ class Rule {
   final String interpretation;
   final String source; // 渊海子平 / 子平真诠 / 三命通会 / 经验总结 ...
 
+  /// The layer this rule speaks about.
+  ///
+  /// A 原局 rule states something about the chart itself and is always in
+  /// scope. A 大运/流年/流月/流日 rule states something about a *moment* and
+  /// is only considered when the analysis actually covers that layer —
+  /// which is what stops natal facts and temporal claims being pooled into
+  /// one flat list.
+  final TemporalLayer layer;
+
+  /// Which reasoning tier the rule occupies:
+  /// 1 基础事实 / 2 命局结构 / 3 格局成败 / 4 岁运引动.
+  ///
+  /// Layered evidence can be ordered and weighted; a flat pool cannot.
+  final int tier;
+
   const Rule({
     required this.id,
     required this.category,
@@ -126,6 +167,8 @@ class Rule {
     required this.conditions,
     required this.interpretation,
     required this.source,
+    this.layer = TemporalLayer.natal,
+    this.tier = 1,
   });
 
   factory Rule.fromJson(Map<String, dynamic> json) => Rule(
@@ -140,6 +183,8 @@ class Rule {
         ],
         interpretation: json['interpretation'] as String,
         source: json['source'] as String? ?? '经验总结',
+        layer: temporalLayerFromName(json['layer'] as String?),
+        tier: json['tier'] as int? ?? 1,
       );
 
   Map<String, dynamic> toJson() => {
@@ -151,6 +196,8 @@ class Rule {
         'conditions': conditions.map((c) => c.toJson()).toList(),
         'interpretation': interpretation,
         'source': source,
+        'layer': layer.label,
+        'tier': tier,
       };
 }
 
@@ -171,6 +218,8 @@ class RuleMatch {
   Map<String, dynamic> toJson() => {
         'title': rule.title,
         'category': rule.category,
+        'layer': rule.layer.label,
+        'tier': rule.tier,
         'score': double.parse(score.toStringAsFixed(2)),
         'matchRatio': double.parse(matchRatio.toStringAsFixed(2)),
         'matched': matchedConditions.map((c) => c.label).toList(),

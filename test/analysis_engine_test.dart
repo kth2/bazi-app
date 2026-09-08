@@ -10,8 +10,18 @@ import 'package:bazi_app/core/analysis/example_repository.dart';
 import 'package:bazi_app/core/analysis/pattern_detector.dart';
 import 'package:bazi_app/core/engine/chart_service.dart';
 import 'package:bazi_app/core/models/birth_input.dart';
+import 'package:bazi_app/core/analysis/reasoning_report.dart';
+import 'package:bazi_app/core/models/chart_result.dart';
 import 'package:bazi_app/core/rules/rule.dart';
-import 'package:bazi_app/core/rules/rule_engine.dart';
+
+List<Rule> loadSeedRules() {
+  final raw = File('assets/rules/seed_rules.json').readAsStringSync();
+  final json = jsonDecode(raw) as Map<String, dynamic>;
+  return [
+    for (final r in json['rules'] as List)
+      Rule.fromJson(r as Map<String, dynamic>),
+  ];
+}
 
 List<AnalysisExample> loadExamplesFromFile() {
   final raw =
@@ -132,58 +142,85 @@ void main() {
   });
 
   group('AnalysisPrompt', () {
+    final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
+    final rules = loadSeedRules();
+
+    Future<String> promptFor({
+      DecadeData? decade,
+      FlowYearData? year,
+      FlowMonthData? month,
+      FlowDayData? day,
+    }) async {
+      final report = ReasoningReport.build(chart1990, rules,
+          decade: decade, year: year, month: month, day: day);
+      return AnalysisPrompt.build(
+        report: report,
+        examples: await repo.findMatches(report.pattern.tags),
+      );
+    }
+
     test('dayun prompt contains all required blocks', () async {
-      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
-      final pattern = PatternDetector.detect(chart1990);
-      final examples = await repo.findSimilar(pattern.tags);
-      final rules = [
-        Rule(
-          id: 'r',
-          category: '整体命局',
-          title: '测试规则',
-          weight: 8,
-          minMatchRatio: 1.0,
-          conditions: const [RuleCondition(type: 'gender', value: '男')],
-          interpretation: 'x',
-          source: 't',
-        ),
-      ];
-      final matches = RuleEngine.evaluate(chart1990, rules);
       final decade = chart1990.decades.first;
       final year = ChartService.flowYearsOf(chart1990, decade).first;
-
-      final prompt = AnalysisPrompt.build(
-        chart: chart1990,
-        pattern: pattern,
-        ruleMatches: matches,
-        examples: examples,
-        decade: decade,
-        year: year,
-      );
+      final prompt = await promptFor(decade: decade, year: year);
 
       expect(prompt, contains('【案例参考】'));
-      expect(prompt, contains('格局判定: 格局：正官格'));
-      expect(prompt, contains('当前大运: ${decade.ganZhi}'));
-      expect(prompt, contains('当前流年: ${year.year}年'));
+      expect(prompt, contains('【格局推演——已定，不得改判】'));
+      expect(prompt, contains('格局：正官格'));
+      expect(prompt, contains('大运 ${decade.ganZhi}'));
+      expect(prompt, contains('流年 ${year.year}年'));
       expect(prompt, contains('一、事业财富'));
       expect(prompt, contains('四、健康分析'));
-      expect(prompt, contains('规则引擎要点'));
-      // Chart JSON embedded.
+      expect(prompt, contains('【分层证据'));
       expect(prompt, contains(chart1990.baziString));
     });
 
+    test('the prompt states the division of labour explicitly', () async {
+      final prompt = await promptFor(decade: chart1990.decades.first);
+      expect(prompt, contains('【重要——分工说明】'));
+      expect(prompt, contains('不是重新推导'));
+      expect(prompt, contains('不得改判'));
+    });
+
+    test('应期 is handed to the model, never asked of it', () async {
+      final decade = chart1990.decades.first;
+      final year = ChartService.flowYearsOf(chart1990, decade).first;
+      final prompt = await promptFor(decade: decade, year: year);
+
+      // The engine's ranked windows are present …
+      expect(prompt, contains('【应期——已由引擎排定，不得另行指定日期】'));
+      expect(prompt, contains('排期依据：'));
+      // … and the old instruction asking the model to pick a date is gone.
+      expect(prompt, isNot(contains('指出最可能的应期日')));
+      expect(prompt, contains('不得自行指定其他日期'));
+    });
+
+    test('examples are framed as reasoning references, not evidence',
+        () async {
+      final prompt = await promptFor(decade: chart1990.decades.first);
+      expect(prompt, contains('不是本命的预测依据'));
+      expect(prompt, contains('严禁以案例的结局外推本命'));
+      // 实际反馈 must carry its own disclaimer wherever it appears.
+      if (prompt.contains('实际反馈')) {
+        expect(prompt, contains('不可作为本命的推断依据'));
+      }
+    });
+
+    test('a fallback example set is labelled as unrelated', () async {
+      final matches = await repo.findMatches({'不存在的标签'});
+      expect(matches.every((m) => m.isFallback), isTrue);
+      final report = ReasoningReport.build(chart1990, rules);
+      final prompt =
+          AnalysisPrompt.build(report: report, examples: matches);
+      expect(prompt, contains('其命理结论与本命无关，不可比附'));
+      expect(prompt, contains('文风参考·与本命结构无关'));
+    });
+
     test('life prompt lists all decades instead of a single one', () async {
-      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
-      final pattern = PatternDetector.detect(chart1990);
-      final prompt = AnalysisPrompt.build(
-        chart: chart1990,
-        pattern: pattern,
-        ruleMatches: const [],
-        examples: await repo.findSimilar(pattern.tags),
-      );
+      final prompt = await promptFor();
       expect(prompt, contains('整体命局终身分析'));
       expect(prompt, contains('大运列表'));
-      expect(prompt, isNot(contains('当前大运')));
+      expect(prompt, isNot(contains('本次分析层级：流年')));
     });
 
     test('luck interactions computed between decade and natal chart', () {
@@ -204,101 +241,64 @@ void main() {
       expect(inter.any((s) => s.contains('流日')), isTrue);
     });
 
-    test('flow-month prompt carries 流月 context and monthly event asks',
-        () async {
-      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
-      final pattern = PatternDetector.detect(chart1990);
+    test('flow-month prompt carries 流月 context', () async {
       final decade = chart1990.decades.first;
       final year = ChartService.flowYearsOf(chart1990, decade).first;
       final month = ChartService.flowMonthsOf(chart1990, year.year).first;
+      final prompt =
+          await promptFor(decade: decade, year: year, month: month);
 
-      final prompt = AnalysisPrompt.build(
-        chart: chart1990,
-        pattern: pattern,
-        ruleMatches: const [],
-        examples: await repo.findSimilar(pattern.tags),
-        decade: decade,
-        year: year,
-        month: month,
-      );
-
-      expect(prompt, contains('当前大运: ${decade.ganZhi}'));
-      expect(prompt, contains('当前流年: ${year.year}年'));
-      expect(prompt, contains('当前流月: ${month.ganZhi}月'));
+      expect(prompt, contains('本次分析层级：流月'));
+      expect(prompt, contains('大运 ${decade.ganZhi}'));
+      expect(prompt, contains('流年 ${year.year}年'));
+      expect(prompt, contains('流月 ${month.ganZhi}月'));
       expect(prompt, contains(month.jieName));
-      expect(prompt, contains('分析此流月'));
-      expect(prompt, contains('本月内可能发生的具体事件'));
-      expect(prompt, contains('应期日'));
+      expect(prompt, contains('解释此流月的具体人事'));
       expect(prompt, contains('一、事业财富'));
-      expect(prompt, contains('四、健康分析'));
-      expect(prompt, isNot(contains('当前流日')));
+      expect(prompt, isNot(contains('本次分析层级：流日')));
     });
 
-    test('flow-day prompt carries 流日 context and daily do/avoid asks',
+    test('flow-day prompt carries 流日 context and the 不创事 constraint',
         () async {
-      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
-      final pattern = PatternDetector.detect(chart1990);
       final decade = chart1990.decades.first;
       final year = ChartService.flowYearsOf(chart1990, decade).first;
       final month = ChartService.flowMonthsOf(chart1990, year.year).first;
       final day = ChartService.flowDaysOf(chart1990, month).first;
+      final prompt = await promptFor(
+          decade: decade, year: year, month: month, day: day);
 
-      final prompt = AnalysisPrompt.build(
-        chart: chart1990,
-        pattern: pattern,
-        ruleMatches: const [],
-        examples: await repo.findSimilar(pattern.tags),
-        decade: decade,
-        year: year,
-        month: month,
-        day: day,
-      );
-
-      expect(prompt, contains('当前流月: ${month.ganZhi}月'));
-      expect(prompt, contains('当前流日:'));
-      expect(prompt, contains('${day.ganZhi}日'));
-      expect(prompt, contains('分析此流日'));
-      expect(prompt, contains('宜忌建议'));
+      expect(prompt, contains('本次分析层级：流日'));
+      expect(prompt, contains(day.ganZhi));
+      expect(prompt, contains('解释此流日的具体人事'));
+      expect(prompt, contains('宜忌'));
+      expect(prompt, contains('不可在流日层凭空创造大事件'));
       expect(prompt, contains('一、事业财富'));
       expect(prompt, contains('四、健康分析'));
     });
 
     test('custom-question prompt at 流日 scope embeds the day pillar',
         () async {
-      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
-      final pattern = PatternDetector.detect(chart1990);
       final decade = chart1990.decades.first;
       final year = ChartService.flowYearsOf(chart1990, decade).first;
       final month = ChartService.flowMonthsOf(chart1990, year.year).first;
       final day = ChartService.flowDaysOf(chart1990, month).first;
+      final report = ReasoningReport.build(chart1990, rules,
+          decade: decade, year: year, month: month, day: day);
 
       final prompt = AnalysisPrompt.buildCustom(
-        chart: chart1990,
-        pattern: pattern,
-        ruleMatches: const [],
-        examples: await repo.findSimilar(pattern.tags),
+        report: report,
+        examples: await repo.findMatches(report.pattern.tags),
         question: '今日适合签合同吗？',
-        decade: decade,
-        year: year,
-        month: month,
-        day: day,
       );
 
-      expect(prompt, contains('当前流日:'));
-      expect(prompt, contains('${day.ganZhi}日'));
+      expect(prompt, contains('本次分析层级：流日'));
+      expect(prompt, contains(day.ganZhi));
       expect(prompt, contains('【用户问题】'));
       expect(prompt, contains('今日适合签合同吗？'));
     });
 
     test('Hu Yiming knowledge notes are embedded in every prompt', () async {
-      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
-      final pattern = PatternDetector.detect(chart1990);
-      final prompt = AnalysisPrompt.build(
-        chart: chart1990,
-        pattern: pattern,
-        ruleMatches: const [],
-        examples: await repo.findSimilar(pattern.tags),
-      );
+      final prompt = await promptFor();
       expect(prompt, contains('命理知识要点（胡一鸣法）'));
       expect(prompt, contains('庚大肠/痔疮')); // disease table present
       expect(prompt, contains('断应期')); // timing theory present
@@ -306,32 +306,28 @@ void main() {
 
     test('custom-question prompt carries full context + the user question',
         () async {
-      final repo = ExampleRepository()..seedForTesting(loadExamplesFromFile());
-      final pattern = PatternDetector.detect(chart1990);
       final decade = chart1990.decades.first;
       final year = ChartService.flowYearsOf(chart1990, decade).first;
       const question =
           '甲辰年最可能发生哪件事？1读博毕业 2感情重挫 3官非牢狱 4双亲离世';
+      final report = ReasoningReport.build(chart1990, rules,
+          decade: decade, year: year);
 
       final prompt = AnalysisPrompt.buildCustom(
-        chart: chart1990,
-        pattern: pattern,
-        ruleMatches: const [],
-        examples: await repo.findSimilar(pattern.tags),
+        report: report,
+        examples: await repo.findMatches(report.pattern.tags),
         question: question,
-        decade: decade,
-        year: year,
       );
 
-      // Shared context still present.
       expect(prompt, contains('【案例参考】'));
       expect(prompt, contains('命理知识要点（胡一鸣法）'));
-      expect(prompt, contains('格局判定: 格局：正官格'));
-      expect(prompt, contains('当前流年: ${year.year}年'));
-      // Question and answer-format instructions.
+      expect(prompt, contains('格局：正官格'));
+      expect(prompt, contains('流年 ${year.year}年'));
       expect(prompt, contains('【用户问题】'));
       expect(prompt, contains(question));
       expect(prompt, contains('必须先明确指出最可能的一项'));
+      // Timing must be quoted from the engine, not recomputed.
+      expect(prompt, contains('不要另行推算或指定其他日期'));
       // Not the 4-category format.
       expect(prompt, isNot(contains('四、健康分析')));
     });

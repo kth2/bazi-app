@@ -88,6 +88,26 @@ class $RuleRowsTable extends RuleRows with TableInfo<$RuleRowsTable, RuleRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _layerMeta = const VerificationMeta('layer');
+  @override
+  late final GeneratedColumn<String> layer = GeneratedColumn<String>(
+    'layer',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('原局'),
+  );
+  static const VerificationMeta _tierMeta = const VerificationMeta('tier');
+  @override
+  late final GeneratedColumn<int> tier = GeneratedColumn<int>(
+    'tier',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -98,6 +118,8 @@ class $RuleRowsTable extends RuleRows with TableInfo<$RuleRowsTable, RuleRow> {
     conditionsJson,
     interpretation,
     source,
+    layer,
+    tier,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -181,6 +203,18 @@ class $RuleRowsTable extends RuleRows with TableInfo<$RuleRowsTable, RuleRow> {
     } else if (isInserting) {
       context.missing(_sourceMeta);
     }
+    if (data.containsKey('layer')) {
+      context.handle(
+        _layerMeta,
+        layer.isAcceptableOrUnknown(data['layer']!, _layerMeta),
+      );
+    }
+    if (data.containsKey('tier')) {
+      context.handle(
+        _tierMeta,
+        tier.isAcceptableOrUnknown(data['tier']!, _tierMeta),
+      );
+    }
     return context;
   }
 
@@ -222,6 +256,14 @@ class $RuleRowsTable extends RuleRows with TableInfo<$RuleRowsTable, RuleRow> {
         DriftSqlType.string,
         data['${effectivePrefix}source'],
       )!,
+      layer: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}layer'],
+      )!,
+      tier: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}tier'],
+      )!,
     );
   }
 
@@ -240,6 +282,12 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
   final String conditionsJson;
   final String interpretation;
   final String source;
+
+  /// Temporal layer the rule speaks about (原局/大运/流年/流月/流日).
+  final String layer;
+
+  /// Reasoning tier: 1 基础事实 / 2 命局结构 / 3 格局成败 / 4 岁运引动.
+  final int tier;
   const RuleRow({
     required this.id,
     required this.category,
@@ -249,6 +297,8 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
     required this.conditionsJson,
     required this.interpretation,
     required this.source,
+    required this.layer,
+    required this.tier,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -261,6 +311,8 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
     map['conditions_json'] = Variable<String>(conditionsJson);
     map['interpretation'] = Variable<String>(interpretation);
     map['source'] = Variable<String>(source);
+    map['layer'] = Variable<String>(layer);
+    map['tier'] = Variable<int>(tier);
     return map;
   }
 
@@ -274,6 +326,8 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
       conditionsJson: Value(conditionsJson),
       interpretation: Value(interpretation),
       source: Value(source),
+      layer: Value(layer),
+      tier: Value(tier),
     );
   }
 
@@ -291,6 +345,8 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
       conditionsJson: serializer.fromJson<String>(json['conditionsJson']),
       interpretation: serializer.fromJson<String>(json['interpretation']),
       source: serializer.fromJson<String>(json['source']),
+      layer: serializer.fromJson<String>(json['layer']),
+      tier: serializer.fromJson<int>(json['tier']),
     );
   }
   @override
@@ -305,6 +361,8 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
       'conditionsJson': serializer.toJson<String>(conditionsJson),
       'interpretation': serializer.toJson<String>(interpretation),
       'source': serializer.toJson<String>(source),
+      'layer': serializer.toJson<String>(layer),
+      'tier': serializer.toJson<int>(tier),
     };
   }
 
@@ -317,6 +375,8 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
     String? conditionsJson,
     String? interpretation,
     String? source,
+    String? layer,
+    int? tier,
   }) => RuleRow(
     id: id ?? this.id,
     category: category ?? this.category,
@@ -326,6 +386,8 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
     conditionsJson: conditionsJson ?? this.conditionsJson,
     interpretation: interpretation ?? this.interpretation,
     source: source ?? this.source,
+    layer: layer ?? this.layer,
+    tier: tier ?? this.tier,
   );
   RuleRow copyWithCompanion(RuleRowsCompanion data) {
     return RuleRow(
@@ -343,6 +405,8 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
           ? data.interpretation.value
           : this.interpretation,
       source: data.source.present ? data.source.value : this.source,
+      layer: data.layer.present ? data.layer.value : this.layer,
+      tier: data.tier.present ? data.tier.value : this.tier,
     );
   }
 
@@ -356,7 +420,9 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
           ..write('minMatchRatio: $minMatchRatio, ')
           ..write('conditionsJson: $conditionsJson, ')
           ..write('interpretation: $interpretation, ')
-          ..write('source: $source')
+          ..write('source: $source, ')
+          ..write('layer: $layer, ')
+          ..write('tier: $tier')
           ..write(')'))
         .toString();
   }
@@ -371,6 +437,8 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
     conditionsJson,
     interpretation,
     source,
+    layer,
+    tier,
   );
   @override
   bool operator ==(Object other) =>
@@ -383,7 +451,9 @@ class RuleRow extends DataClass implements Insertable<RuleRow> {
           other.minMatchRatio == this.minMatchRatio &&
           other.conditionsJson == this.conditionsJson &&
           other.interpretation == this.interpretation &&
-          other.source == this.source);
+          other.source == this.source &&
+          other.layer == this.layer &&
+          other.tier == this.tier);
 }
 
 class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
@@ -395,6 +465,8 @@ class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
   final Value<String> conditionsJson;
   final Value<String> interpretation;
   final Value<String> source;
+  final Value<String> layer;
+  final Value<int> tier;
   final Value<int> rowid;
   const RuleRowsCompanion({
     this.id = const Value.absent(),
@@ -405,6 +477,8 @@ class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
     this.conditionsJson = const Value.absent(),
     this.interpretation = const Value.absent(),
     this.source = const Value.absent(),
+    this.layer = const Value.absent(),
+    this.tier = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RuleRowsCompanion.insert({
@@ -416,6 +490,8 @@ class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
     required String conditionsJson,
     required String interpretation,
     required String source,
+    this.layer = const Value.absent(),
+    this.tier = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        category = Value(category),
@@ -434,6 +510,8 @@ class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
     Expression<String>? conditionsJson,
     Expression<String>? interpretation,
     Expression<String>? source,
+    Expression<String>? layer,
+    Expression<int>? tier,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -445,6 +523,8 @@ class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
       if (conditionsJson != null) 'conditions_json': conditionsJson,
       if (interpretation != null) 'interpretation': interpretation,
       if (source != null) 'source': source,
+      if (layer != null) 'layer': layer,
+      if (tier != null) 'tier': tier,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -458,6 +538,8 @@ class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
     Value<String>? conditionsJson,
     Value<String>? interpretation,
     Value<String>? source,
+    Value<String>? layer,
+    Value<int>? tier,
     Value<int>? rowid,
   }) {
     return RuleRowsCompanion(
@@ -469,6 +551,8 @@ class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
       conditionsJson: conditionsJson ?? this.conditionsJson,
       interpretation: interpretation ?? this.interpretation,
       source: source ?? this.source,
+      layer: layer ?? this.layer,
+      tier: tier ?? this.tier,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -500,6 +584,12 @@ class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
     if (source.present) {
       map['source'] = Variable<String>(source.value);
     }
+    if (layer.present) {
+      map['layer'] = Variable<String>(layer.value);
+    }
+    if (tier.present) {
+      map['tier'] = Variable<int>(tier.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -517,6 +607,8 @@ class RuleRowsCompanion extends UpdateCompanion<RuleRow> {
           ..write('conditionsJson: $conditionsJson, ')
           ..write('interpretation: $interpretation, ')
           ..write('source: $source, ')
+          ..write('layer: $layer, ')
+          ..write('tier: $tier, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -750,6 +842,8 @@ typedef $$RuleRowsTableCreateCompanionBuilder =
       required String conditionsJson,
       required String interpretation,
       required String source,
+      Value<String> layer,
+      Value<int> tier,
       Value<int> rowid,
     });
 typedef $$RuleRowsTableUpdateCompanionBuilder =
@@ -762,6 +856,8 @@ typedef $$RuleRowsTableUpdateCompanionBuilder =
       Value<String> conditionsJson,
       Value<String> interpretation,
       Value<String> source,
+      Value<String> layer,
+      Value<int> tier,
       Value<int> rowid,
     });
 
@@ -811,6 +907,16 @@ class $$RuleRowsTableFilterComposer
 
   ColumnFilters<String> get source => $composableBuilder(
     column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get layer => $composableBuilder(
+    column: $table.layer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tier => $composableBuilder(
+    column: $table.tier,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -863,6 +969,16 @@ class $$RuleRowsTableOrderingComposer
     column: $table.source,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get layer => $composableBuilder(
+    column: $table.layer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tier => $composableBuilder(
+    column: $table.tier,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RuleRowsTableAnnotationComposer
@@ -903,6 +1019,12 @@ class $$RuleRowsTableAnnotationComposer
 
   GeneratedColumn<String> get source =>
       $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get layer =>
+      $composableBuilder(column: $table.layer, builder: (column) => column);
+
+  GeneratedColumn<int> get tier =>
+      $composableBuilder(column: $table.tier, builder: (column) => column);
 }
 
 class $$RuleRowsTableTableManager
@@ -941,6 +1063,8 @@ class $$RuleRowsTableTableManager
                 Value<String> conditionsJson = const Value.absent(),
                 Value<String> interpretation = const Value.absent(),
                 Value<String> source = const Value.absent(),
+                Value<String> layer = const Value.absent(),
+                Value<int> tier = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RuleRowsCompanion(
                 id: id,
@@ -951,6 +1075,8 @@ class $$RuleRowsTableTableManager
                 conditionsJson: conditionsJson,
                 interpretation: interpretation,
                 source: source,
+                layer: layer,
+                tier: tier,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -963,6 +1089,8 @@ class $$RuleRowsTableTableManager
                 required String conditionsJson,
                 required String interpretation,
                 required String source,
+                Value<String> layer = const Value.absent(),
+                Value<int> tier = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RuleRowsCompanion.insert(
                 id: id,
@@ -973,6 +1101,8 @@ class $$RuleRowsTableTableManager
                 conditionsJson: conditionsJson,
                 interpretation: interpretation,
                 source: source,
+                layer: layer,
+                tier: tier,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

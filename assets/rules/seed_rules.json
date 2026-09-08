@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 6,
   "rules": [
     {
       "id": "overall_shen_qiang",
@@ -7,9 +7,17 @@
       "title": "身强之命",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "verdict", "value": "身强", "required": true}],
-      "interpretation": "日主得令得势，同党力量过半，属身强格局。身强者能任财官，喜财星、官杀、食伤克泄耗，忌印比再助身。行运宜走财官食伤之地，人生主动进取方能发挥命局潜力。",
-      "source": "渊海子平"
+      "conditions": [
+        {
+          "type": "verdict",
+          "value": "身强",
+          "required": true
+        }
+      ],
+      "interpretation": "日主得令得势，同党力量过半，旺衰属身强。按《子平真诠》，旺衰是「辅助判断」而非取用之本：用神仍专求月令，先定格局、再看成败，不可径以身强身弱套论喜忌。身强只说明日主有力承担——格局所需之财官食伤能担得起；至于该用何神、喜行何运，须回到格局成败与相神去定。若克泄生扶皆无所用，方转论变格。",
+      "source": "子平真诠",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "overall_shen_ruo",
@@ -17,9 +25,17 @@
       "title": "身弱之命",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "verdict", "value": "身弱", "required": true}],
-      "interpretation": "日主失令失势，同党力量不足，属身弱格局。身弱者不胜财官，喜印星生身、比劫帮身，忌财官食伤再克泄。宜稳中求进，善借他人之力，贵人相助尤为关键。",
-      "source": "渊海子平"
+      "conditions": [
+        {
+          "type": "verdict",
+          "value": "身弱",
+          "required": true
+        }
+      ],
+      "interpretation": "日主失令失势，同党力量不足，旺衰属身弱。此为辅助判断，非取用之本：用神仍专求月令，先定格局、再看成败。身弱只说明日主承担有限——格局所需之神若过旺，恐力不能任，须赖印比之助或相神通关；但究竟以何为用，仍由格局决定，不可一见身弱便取印比为用。若日主无根无印、生扶全无所用，则转论从格。",
+      "source": "子平真诠",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "overall_zhong_he",
@@ -27,9 +43,17 @@
       "title": "中和之命",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "verdict", "value": "中和", "required": true}],
-      "interpretation": "五行力量趋于均衡，日主不强不弱，为中和之命。子平以中和为贵：五行流通，喜忌不偏，一生较少大起大落，行运顺逆皆有转圜余地。",
-      "source": "子平真诠"
+      "conditions": [
+        {
+          "type": "verdict",
+          "value": "中和",
+          "required": true
+        }
+      ],
+      "interpretation": "五行力量趋于均衡，日主不强不弱，旺衰属中和。中和之局少有偏枯之病，行运顺逆皆有转圜余地。但中和仅为旺衰之象，取用仍须回到月令格局：先看格神是否有力、相神是否到位、有无破格与救应，不可因「五行流通」四字便断为好命。",
+      "source": "子平真诠",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "overall_guan_yin_xiang_sheng",
@@ -38,12 +62,25 @@
       "weight": 8,
       "minMatchRatio": 0.66,
       "conditions": [
-        {"type": "hasShiShen", "value": "正官", "required": true},
-        {"type": "hasShiShen", "value": "印星", "required": true},
-        {"type": "verdict", "value": "身弱"}
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "required": true
+        },
+        {
+          "type": "verdict",
+          "value": "身弱"
+        }
       ],
       "interpretation": "正官与印星同现，官生印、印生身，为官印相生之贵格。主为人端正，有官贵之气，学业事业皆有靠山，尤利仕途与大机构发展。身弱者得此，官杀之克化为生身之源。",
-      "source": "子平真诠"
+      "source": "子平真诠",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "overall_sha_yin_xiang_sheng",
@@ -52,12 +89,25 @@
       "weight": 8,
       "minMatchRatio": 0.66,
       "conditions": [
-        {"type": "hasShiShen", "value": "七杀", "required": true},
-        {"type": "hasShiShen", "value": "印星", "required": true},
-        {"type": "verdict", "value": "身弱"}
+        {
+          "type": "hasShiShen",
+          "value": "七杀",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "required": true
+        },
+        {
+          "type": "verdict",
+          "value": "身弱"
+        }
       ],
       "interpretation": "七杀之凶得印星化解，化杀为权，是为杀印相生。主人魄力过人，能于压力与竞争中脱颖而出，宜武职、执法、外科、技术攻坚等有锋芒之业。",
-      "source": "子平真诠"
+      "source": "子平真诠",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "overall_shi_shen_sheng_cai",
@@ -66,11 +116,21 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "食神", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "食神",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "食神吐秀生财，财源有根，为福寿富贵之象。主人心宽体胖，才艺谋生，钱财因技艺才华而来，细水长流，晚景丰隆。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "overall_shang_guan_pei_yin",
@@ -79,11 +139,21 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "伤官", "required": true},
-        {"type": "hasShiShen", "value": "印星", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "伤官",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "required": true
+        }
       ],
       "interpretation": "伤官之聪明外泄，得印星收束约制，是为伤官配印，贵气可期。主人才华横溢而不失分寸，文章艺术、创意谋略皆有大成之机。",
-      "source": "子平真诠"
+      "source": "子平真诠",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "overall_cai_guan_shuang_mei",
@@ -92,12 +162,25 @@
       "weight": 7,
       "minMatchRatio": 0.66,
       "conditions": [
-        {"type": "hasShiShen", "value": "正财", "required": true},
-        {"type": "hasShiShen", "value": "正官", "required": true},
-        {"type": "verdict", "value": "身强"}
+        {
+          "type": "hasShiShen",
+          "value": "正财",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "required": true
+        },
+        {
+          "type": "verdict",
+          "value": "身强"
+        }
       ],
       "interpretation": "正财正官俱现，财生官旺，名利双收之象。身强能任财官者，富贵可期；主人处事正派，善经营亦能得社会名位。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "overall_bi_jie_lin_li",
@@ -106,10 +189,17 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "shiShenCount", "value": "比劫", "count": 3, "required": true}
+        {
+          "type": "shiShenCount",
+          "value": "比劫",
+          "count": 3,
+          "required": true
+        }
       ],
       "interpretation": "比肩劫财众多，兄弟朋友成群而争财之象亦重。主人重义气、好交游，但合伙破财、为人担保受累之事需谨慎，钱财宜早做规划各立门户。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "wealth_cai_duo_shen_ruo",
@@ -118,11 +208,22 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "shiShenCount", "value": "财星", "count": 3, "required": true},
-        {"type": "verdict", "value": "身弱", "required": true}
+        {
+          "type": "shiShenCount",
+          "value": "财星",
+          "count": 3,
+          "required": true
+        },
+        {
+          "type": "verdict",
+          "value": "身弱",
+          "required": true
+        }
       ],
       "interpretation": "财星过重而日主无力承担，谓之财多身弱，富屋贫人之象。见财起意反受财累，宜行印比帮身之运，或与人合力求财，不可独贪大财。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "overall_guan_sha_hun_za",
@@ -131,11 +232,23 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "正官", "scope": "main", "required": true},
-        {"type": "hasShiShen", "value": "七杀", "scope": "main", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "scope": "main",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "七杀",
+          "scope": "main",
+          "required": true
+        }
       ],
       "interpretation": "正官七杀并见，谓之官杀混杂。主管束多头、压力纷至，易进退失据、心神不宁。喜有合去其一（去官留杀或去杀留官）使命局清纯，行运遇之亦同。",
-      "source": "子平真诠"
+      "source": "子平真诠",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "overall_shang_guan_jian_guan",
@@ -144,11 +257,23 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "伤官", "scope": "stem", "required": true},
-        {"type": "hasShiShen", "value": "正官", "scope": "stem", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "伤官",
+          "scope": "stem",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "scope": "stem",
+          "required": true
+        }
       ],
       "interpretation": "伤官与正官两透天干，古诀云伤官见官、为祸百端。主易与上司权威冲突，口舌是非、官非纠纷需防；然有印制伤或财通关者，其祸可解。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "overall_xiao_shen_duo_shi",
@@ -157,11 +282,23 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "偏印", "scope": "stem", "required": true},
-        {"type": "hasShiShen", "value": "食神", "scope": "stem", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "偏印",
+          "scope": "stem",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "食神",
+          "scope": "stem",
+          "required": true
+        }
       ],
       "interpretation": "偏印（枭神）与食神并透，枭印夺食之象。主福气才华易受掣肘，做事常临门一脚被截，健康上亦防饮食脾胃之疾。喜财星制枭解救。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "overall_yang_ren",
@@ -169,9 +306,17 @@
       "title": "羊刃在命",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "羊刃", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "羊刃",
+          "required": true
+        }
+      ],
       "interpretation": "羊刃乃日主锋芒之极，主性格刚烈果决，行动力极强。有七杀驾刃者可掌权柄；无制者需防刚愎冲动、破财伤身之患。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "overall_kui_gang",
@@ -179,9 +324,17 @@
       "title": "魁罡入命",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "魁罡", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "魁罡",
+          "required": true
+        }
+      ],
       "interpretation": "日坐魁罡，性情严明果断，聪明而好胜，掌权之命。魁罡喜身旺，忌见财官刑冲；成格者贵不可言，破格则起伏较大。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "overall_que_mu",
@@ -189,9 +342,19 @@
       "title": "五行木弱",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "木", "op": "<=", "threshold": 6, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "木",
+          "op": "<=",
+          "threshold": 6,
+          "required": true
+        }
+      ],
       "interpretation": "命局木气微弱。木主仁、主生发条达，木弱者魄力谋划稍欠伸展，做事宜借势而起。方位利东方，颜色宜青绿，多亲近花木晨光以补木气。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "overall_que_huo",
@@ -199,9 +362,19 @@
       "title": "五行火弱",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "火", "op": "<=", "threshold": 6, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "火",
+          "op": "<=",
+          "threshold": 6,
+          "required": true
+        }
+      ],
       "interpretation": "命局火气微弱。火主礼、主文明礼乐与热情，火弱者行事偏冷静内敛，人前热度不足。方位利南方，颜色宜红紫，生活中多见阳光则精神易振。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "overall_que_tu",
@@ -209,9 +382,19 @@
       "title": "五行土弱",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "土", "op": "<=", "threshold": 6, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "土",
+          "op": "<=",
+          "threshold": 6,
+          "required": true
+        }
+      ],
       "interpretation": "命局土气微弱。土主信、主承载包容，土弱者根基易浮，居所职业变动较频。宜置产安家以固根基，方位利本地与西南，颜色宜黄。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "overall_que_jin",
@@ -219,9 +402,19 @@
       "title": "五行金弱",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "金", "op": "<=", "threshold": 6, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "金",
+          "op": "<=",
+          "threshold": 6,
+          "required": true
+        }
+      ],
       "interpretation": "命局金气微弱。金主义、主决断肃杀，金弱者临事决断稍缓，原则性需自我提点。方位利西方，颜色宜白，佩金属饰物可助金气。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "overall_que_shui",
@@ -229,9 +422,19 @@
       "title": "五行水弱",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "水", "op": "<=", "threshold": 6, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "水",
+          "op": "<=",
+          "threshold": 6,
+          "required": true
+        }
+      ],
       "interpretation": "命局水气微弱。水主智、主流通变化，水弱者思路偏执着，变通与人情往来需刻意经营。方位利北方，颜色宜黑蓝，近水而居有益。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "marriage_male_zheng_cai",
@@ -240,11 +443,22 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "男", "required": true},
-        {"type": "hasShiShen", "value": "正财", "scope": "main", "required": true}
+        {
+          "type": "gender",
+          "value": "男",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "正财",
+          "scope": "main",
+          "required": true
+        }
       ],
       "interpretation": "男以正财为妻星，正财明现主妻缘端正，配偶持家贤惠，婚姻观念传统而稳定。正财喜藏于日支（配偶宫），则夫妻同心。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "marriage_male_bi_jie_duo_cai",
@@ -253,12 +467,27 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "男", "required": true},
-        {"type": "shiShenCount", "value": "比劫", "count": 2, "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true}
+        {
+          "type": "gender",
+          "value": "男",
+          "required": true
+        },
+        {
+          "type": "shiShenCount",
+          "value": "比劫",
+          "count": 2,
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "男命比劫重重而见财星，谓之群劫争财。妻星受夺，主婚缘易生波折竞争，感情中防第三者与兄弟朋友之扰；婚后钱财宜由配偶掌管以化解。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "marriage_male_wu_cai",
@@ -267,11 +496,21 @@
       "weight": 5,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "男", "required": true},
-        {"type": "lacksShiShen", "value": "财星", "required": true}
+        {
+          "type": "gender",
+          "value": "男",
+          "required": true
+        },
+        {
+          "type": "lacksShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "男命四柱不见财星，妻星伏而不显。主姻缘来得较迟或感情表达含蓄，需大运流年财星引动方见良缘，不宜早婚强求。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "marriage_female_zheng_guan",
@@ -280,11 +519,22 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "女", "required": true},
-        {"type": "hasShiShen", "value": "正官", "scope": "main", "required": true}
+        {
+          "type": "gender",
+          "value": "女",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "scope": "main",
+          "required": true
+        }
       ],
       "interpretation": "女以正官为夫星，正官明现且不混杂者，主夫缘正当，配偶有责任感、行事端正，婚姻有名分保障。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "marriage_female_guan_sha_hun_za",
@@ -293,12 +543,26 @@
       "weight": 8,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "女", "required": true},
-        {"type": "hasShiShen", "value": "正官", "required": true},
-        {"type": "hasShiShen", "value": "七杀", "required": true}
+        {
+          "type": "gender",
+          "value": "女",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "七杀",
+          "required": true
+        }
       ],
       "interpretation": "女命官杀并见，夫星混杂，感情选择多而难专一，易陷多角纠葛或遇人不淑。喜食伤制杀或合去其一，则感情归于清纯；择偶宜迟不宜早。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "marriage_female_shang_guan_jian_guan",
@@ -307,12 +571,27 @@
       "weight": 8,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "女", "required": true},
-        {"type": "hasShiShen", "value": "伤官", "scope": "stem", "required": true},
-        {"type": "hasShiShen", "value": "正官", "required": true}
+        {
+          "type": "gender",
+          "value": "女",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "伤官",
+          "scope": "stem",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "required": true
+        }
       ],
       "interpretation": "女命伤官透干又见官星，伤官克夫星，古谓婚姻之忌。主对配偶要求高、言语易伤情分，婚姻多磨。有财通关或印制伤者可解，晚婚为宜。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "marriage_female_wu_guan",
@@ -321,11 +600,21 @@
       "weight": 5,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "女", "required": true},
-        {"type": "lacksShiShen", "value": "官杀", "required": true}
+        {
+          "type": "gender",
+          "value": "女",
+          "required": true
+        },
+        {
+          "type": "lacksShiShen",
+          "value": "官杀",
+          "required": true
+        }
       ],
       "interpretation": "女命四柱不见官杀，夫星伏而不显。主姻缘较迟或对婚姻随缘淡然，需行官杀大运流年引动夫星，感情方有着落；心态上不必因迟而忧。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "marriage_ri_zhi_chong",
@@ -334,10 +623,17 @@
       "weight": 8,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasInteraction", "value": "地支六冲", "position": "日柱", "required": true}
+        {
+          "type": "hasInteraction",
+          "value": "地支六冲",
+          "position": "日柱",
+          "required": true
+        }
       ],
       "interpretation": "日支为配偶宫，逢冲则夫妻宫动摇。主婚姻聚少离多或口角波折较多，婚期亦多反复；宜晚婚、异地婚或婚后适度分离空间以应冲象。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "marriage_ri_zhi_he",
@@ -346,10 +642,17 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasInteraction", "value": "地支六合", "position": "日柱", "required": true}
+        {
+          "type": "hasInteraction",
+          "value": "地支六合",
+          "position": "日柱",
+          "required": true
+        }
       ],
       "interpretation": "日支配偶宫逢六合，夫妻缘分粘合紧密，配偶顾家，婚姻向心力强。唯合多亦主感情牵绊多，婚前烂桃花宜早断。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "marriage_tao_hua",
@@ -357,9 +660,17 @@
       "title": "咸池桃花",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "咸池", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "咸池",
+          "required": true
+        }
+      ],
       "interpretation": "命带咸池桃花，主人魅力天成，异性缘旺盛，谈情机会多于常人。桃花在年月为内桃花尚吉，在日时且逢刑冲者防感情是非缠身。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "marriage_hong_yan",
@@ -367,9 +678,17 @@
       "title": "红艳煞",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "红艳", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "红艳",
+          "required": true
+        }
+      ],
       "interpretation": "红艳入命，风情内蕴，举止言谈自带吸引力，感情经历较为丰富。已婚者宜自守分寸，防暧昧生事。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "marriage_hong_luan_tian_xi",
@@ -378,11 +697,19 @@
       "weight": 5,
       "minMatchRatio": 0.5,
       "conditions": [
-        {"type": "hasShenSha", "value": "红鸾"},
-        {"type": "hasShenSha", "value": "天喜"}
+        {
+          "type": "hasShenSha",
+          "value": "红鸾"
+        },
+        {
+          "type": "hasShenSha",
+          "value": "天喜"
+        }
       ],
       "interpretation": "红鸾天喜为喜庆姻缘之星，主人缘和悦，婚恋之事多有喜兆，逢流年引动尤验嫁娶添丁之喜。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "marriage_gu_chen_gua_su",
@@ -391,11 +718,19 @@
       "weight": 6,
       "minMatchRatio": 0.5,
       "conditions": [
-        {"type": "hasShenSha", "value": "孤辰"},
-        {"type": "hasShenSha", "value": "寡宿"}
+        {
+          "type": "hasShenSha",
+          "value": "孤辰"
+        },
+        {
+          "type": "hasShenSha",
+          "value": "寡宿"
+        }
       ],
       "interpretation": "命带孤辰寡宿，性喜清静独处，感情上慢热而不善主动经营。并非无缘，而是缘分需更多耐心；培养共同志趣可化孤象。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "career_zheng_guan_tou_gan",
@@ -404,10 +739,17 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "正官", "scope": "stem", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "scope": "stem",
+          "required": true
+        }
       ],
       "interpretation": "正官透出天干，名分之星高悬。主适合体制内、大企业等讲求秩序名位之路，为人守规重诺，上司提携之力可期。官星喜财生、忌伤官克。",
-      "source": "子平真诠"
+      "source": "子平真诠",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "career_qi_sha_you_zhi",
@@ -416,11 +758,21 @@
       "weight": 8,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "七杀", "required": true},
-        {"type": "hasShiShen", "value": "食伤", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "七杀",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "required": true
+        }
       ],
       "interpretation": "七杀得食伤制服，化凶顽为我用，古谓杀有制化为权。主事业上敢打硬仗，压力愈大成就愈显，宜竞争性行业、创业、军警法或技术攻坚领域。",
-      "source": "子平真诠"
+      "source": "子平真诠",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "career_shi_shang_sheng_cai",
@@ -429,12 +781,25 @@
       "weight": 8,
       "minMatchRatio": 0.66,
       "conditions": [
-        {"type": "hasShiShen", "value": "食伤", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true},
-        {"type": "verdict", "value": "身强"}
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        },
+        {
+          "type": "verdict",
+          "value": "身强"
+        }
       ],
       "interpretation": "食伤吐秀而财星承接，才华直接变现之格。宜经商贸易、创作设计、演艺口才等以技艺才华求财之路，身强者尤能大展拳脚。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "career_yin_wang_li_xue",
@@ -443,10 +808,17 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "shiShenCount", "value": "印星", "count": 2, "required": true}
+        {
+          "type": "shiShenCount",
+          "value": "印星",
+          "count": 2,
+          "required": true
+        }
       ],
       "interpretation": "印星重叠，主与文书学问缘深，记性好、爱钻研，适合学术、教育、医疗、文化出版等以知识立身之业。印过重则防思多行少，需食伤财星调剂。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "wealth_shen_qiang_cai_wang",
@@ -455,11 +827,22 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "verdict", "value": "身强", "required": true},
-        {"type": "shiShenCount", "value": "财星", "count": 2, "required": true}
+        {
+          "type": "verdict",
+          "value": "身强",
+          "required": true
+        },
+        {
+          "type": "shiShenCount",
+          "value": "财星",
+          "count": 2,
+          "required": true
+        }
       ],
       "interpretation": "身强能任财，财星又得地有力，求财之命。主理财眼光敏锐，敢于投资经营，财富格局大于常人，宜实业与金融并举。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "career_yi_ma",
@@ -467,9 +850,17 @@
       "title": "驿马入命",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "驿马", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "驿马",
+          "required": true
+        }
+      ],
       "interpretation": "驿马主动，命带驿马者奔波中求发展，利外出他乡立业、贸易运输、外派差旅之职。马逢冲则动愈速，静守本地反失其利。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "career_jiang_xing",
@@ -477,9 +868,17 @@
       "title": "将星入命",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "将星", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "将星",
+          "required": true
+        }
+      ],
       "interpretation": "将星入命，天生统御之才，组织号召力强，居团队则渐成核心。与官杀同宫者掌实权，宜管理领导之途。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "career_hua_gai",
@@ -487,9 +886,17 @@
       "title": "华盖入命",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "华盖", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "华盖",
+          "required": true
+        }
+      ],
       "interpretation": "华盖乃孤高之艺星，主聪慧脱俗，与宗教哲学、五术玄学、艺术设计有缘。事业上宜凭一技之长独树一帜，不宜随波逐流。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "career_tian_yi_gui_ren",
@@ -497,9 +904,17 @@
       "title": "天乙贵人",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "天乙贵人", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "天乙贵人",
+          "required": true
+        }
+      ],
       "interpretation": "天乙为诸神煞之首，命带贵人者一生逢凶化吉之力强，危难之际每有贵人援手。宜多经营人脉，善缘即是事业资本。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "career_lu_shen",
@@ -507,9 +922,17 @@
       "title": "禄神在命",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "禄神", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "禄神",
+          "required": true
+        }
+      ],
       "interpretation": "禄为养命之源，命带禄神主衣食丰足，凭自身本事进财，职位俸禄稳定。禄怕冲破，逢冲之年防职位变动。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "wealth_pian_cai_tou_gan",
@@ -518,10 +941,17 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "偏财", "scope": "stem", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "偏财",
+          "scope": "stem",
+          "required": true
+        }
       ],
       "interpretation": "偏财透出天干，众人之财入我命。主财路宽广，善抓商机，投资贸易、流动之财缘分深厚；偏财喜身旺，来得快亦去得快，落袋为安方为上策。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "wealth_zheng_cai_wen_jian",
@@ -530,11 +960,22 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "正财", "scope": "main", "required": true},
-        {"type": "lacksShiShen", "value": "偏财", "scope": "stem"}
+        {
+          "type": "hasShiShen",
+          "value": "正财",
+          "scope": "main",
+          "required": true
+        },
+        {
+          "type": "lacksShiShen",
+          "value": "偏财",
+          "scope": "stem"
+        }
       ],
       "interpretation": "正财当家而偏财不透，财风稳健。主凭勤劳正道积财，量入为出，财富细水长流；不宜贪快钱行险着，稳扎稳打自有丰盈。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "wealth_shi_shang_sheng_cai",
@@ -543,11 +984,21 @@
       "weight": 8,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "食伤", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "食伤生财，财有源头活水。主钱财由才华技艺、口才创意转化而来，属愈输出愈富之命；开辟第二技能收入，财源可成倍放大。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "wealth_bi_jie_zheng_cai",
@@ -556,11 +1007,22 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "shiShenCount", "value": "比劫", "count": 2, "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true}
+        {
+          "type": "shiShenCount",
+          "value": "比劫",
+          "count": 2,
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "比劫重而见财，同侪争财之象。破财多因合伙、借贷、担保而起；钱财宜分账明晰、亲兄弟明算账，独资经营胜过合股。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "wealth_wu_cai_xing",
@@ -569,10 +1031,16 @@
       "weight": 5,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "lacksShiShen", "value": "财星", "required": true}
+        {
+          "type": "lacksShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "四柱不见财星，财缘伏而不显。并非无财，而是财不外露、进财较缓，需行财运引动；宜以技能学识立身，财随名至。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "wealth_jin_yu",
@@ -580,9 +1048,17 @@
       "title": "金舆入命",
       "weight": 5,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "hasShenSha", "value": "金舆", "required": true}],
+      "conditions": [
+        {
+          "type": "hasShenSha",
+          "value": "金舆",
+          "required": true
+        }
+      ],
       "interpretation": "金舆乃禄命之车，主富贵安逸之福。命带金舆者易得资产享用，车宅之福胜于常人，亦主得配偶家庭之助力而增财。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "wealth_cai_zuo_ku",
@@ -591,11 +1067,21 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShenSha", "value": "羊刃", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true}
+        {
+          "type": "hasShenSha",
+          "value": "羊刃",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "羊刃锋锐而命中有财，刃旺则劫财之性暗藏。主进财虽猛，破耗亦烈，大进大出；忌赌博投机，置产储蓄可锁住财气。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "edu_zheng_yin_zhu_xue",
@@ -604,10 +1090,17 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "正印", "scope": "main", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "正印",
+          "scope": "main",
+          "required": true
+        }
       ],
       "interpretation": "正印乃学业文书之星，明现且不受伤者，主读书有成、文凭学历顺遂。为人好学守规，宜循正规学制稳步深造，考试功名之路较为平顺。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "edu_guan_yin_gong_ming",
@@ -616,11 +1109,21 @@
       "weight": 8,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "正官", "required": true},
-        {"type": "hasShiShen", "value": "印星", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "required": true
+        }
       ],
       "interpretation": "官星生印、印星护身，官印相生最利功名考试。主学业与名位挂钩，宜走公职、学术、体制内深造之路，学历常成为晋身的敲门砖，考运亦佳。",
-      "source": "子平真诠"
+      "source": "子平真诠",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "edu_wen_chang",
@@ -629,10 +1132,16 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShenSha", "value": "文昌", "required": true}
+        {
+          "type": "hasShenSha",
+          "value": "文昌",
+          "required": true
+        }
       ],
       "interpretation": "文昌贵人乃聪明智慧之星，命带文昌者天资聪颖、记忆力强，读书考试每有巧思。逢考试升学流年引动，尤易金榜题名、文书有喜。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "edu_xue_tang",
@@ -641,10 +1150,16 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShenSha", "value": "学堂", "required": true}
+        {
+          "type": "hasShenSha",
+          "value": "学堂",
+          "required": true
+        }
       ],
       "interpretation": "命带学堂词馆，古谓读书之在学堂、翰林之在词馆，主一生与学问文教有缘。宜潜心治学、以文立身，学术研究、教育文化之途最能发挥。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "edu_tai_ji_gui_ren",
@@ -653,10 +1168,16 @@
       "weight": 5,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShenSha", "value": "太极", "required": true}
+        {
+          "type": "hasShenSha",
+          "value": "太极",
+          "required": true
+        }
       ],
       "interpretation": "太极贵人主聪慧好学、喜究天地玄机，于哲理、玄学、考古、数理等深奥之学尤有慧根。做学问能钻深研透，成一家之言之机可期。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "edu_hua_gai_qian_yan",
@@ -665,10 +1186,16 @@
       "weight": 5,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShenSha", "value": "华盖", "required": true}
+        {
+          "type": "hasShenSha",
+          "value": "华盖",
+          "required": true
+        }
       ],
       "interpretation": "华盖主孤高聪慧，静得下心、耐得住寂寞，宜专精一门冷门或高深之学。做研究能坐冷板凳、独辟蹊径，学术艺术上易有独到造诣。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "edu_shang_guan_cong_min",
@@ -677,10 +1204,17 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "伤官", "scope": "stem", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "伤官",
+          "scope": "stem",
+          "required": true
+        }
       ],
       "interpretation": "伤官吐秀，主人聪明过人、领悟力强，才思敏捷胜于常人。然性喜自由发挥，未必安于刻板应试；宜扬其才华走创意、专才或自学成家之路。",
-      "source": "渊海子平"
+      "source": "渊海子平",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "edu_xiao_shen_duo_shi",
@@ -689,11 +1223,23 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "偏印", "scope": "stem", "required": true},
-        {"type": "hasShiShen", "value": "食神", "scope": "stem", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "偏印",
+          "scope": "stem",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "食神",
+          "scope": "stem",
+          "required": true
+        }
       ],
       "interpretation": "偏印夺食，学业才华易被掣肘，读书常临门受挫或半途转向。宜早立目标、专注一途，忌频繁转换学科方向；得财星制枭之运其阻可解。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "edu_yin_xing_fu_cang",
@@ -702,10 +1248,16 @@
       "weight": 5,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "lacksShiShen", "value": "印星", "required": true}
+        {
+          "type": "lacksShiShen",
+          "value": "印星",
+          "required": true
+        }
       ],
       "interpretation": "四柱不见印星，学业星伏而不显。主对正规学历较为随缘，或求学路径不循常轨。然天道酬勤，靠实践历练与自学同样可成才，未必以文凭论高下。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "hu_career_guan_yin_shang_ban",
@@ -714,11 +1266,21 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "正官", "required": true},
-        {"type": "hasShiShen", "value": "印星", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "required": true
+        }
       ],
       "interpretation": "官印相生之人是一流管理人员，被动型赚钱：借组织与职位而贵，上班晋升之路顺畅。但此格不善自寻财源，独立创业多有折损，宜依托平台而非单打独斗。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_career_cai_guan_yin",
@@ -727,12 +1289,26 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "财星", "required": true},
-        {"type": "hasShiShen", "value": "正官", "required": true},
-        {"type": "hasShiShen", "value": "印星", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "required": true
+        }
       ],
       "interpretation": "财生官、官生印一气流转，当官打工之命。财无伤者，借官位、地位、职位来赚钱，职级越高财路越宽；财受克时则为标准清官，位高而财平。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_career_lao_ban_ming",
@@ -741,13 +1317,31 @@
       "weight": 8,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "verdict", "value": "身强", "required": true},
-        {"type": "hasShiShen", "value": "食伤", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true},
-        {"type": "hasShiShen", "value": "官杀", "required": true}
+        {
+          "type": "verdict",
+          "value": "身强",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "官杀",
+          "required": true
+        }
       ],
       "interpretation": "身旺而食伤生财、财又生官：食伤生财是想赚钱有财源，财生官是求地位，此为当老板创业之命。用食伤之人打江山一流，敢以才华智慧开辟财路。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_career_shi_shang_ke_guan",
@@ -756,11 +1350,22 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "食伤", "scope": "stem", "required": true},
-        {"type": "hasShiShen", "value": "官杀", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "scope": "stem",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "官杀",
+          "required": true
+        }
       ],
       "interpretation": "食伤克官杀之人不认输不服输，有一股拼劲，爱自由不愿受约束，看理想比一切重要。求职面试易因无形傲气吃亏，与上司权威易生摩擦；宜自由职业、专业技术或自立门户。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "hu_wealth_shen_ruo_xin_ku",
@@ -769,12 +1374,26 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "verdict", "value": "身弱", "required": true},
-        {"type": "hasShiShen", "value": "食伤", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true}
+        {
+          "type": "verdict",
+          "value": "身弱",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "身弱而食伤生财，赚钱辛苦劳累，付出与所得难成正比。忌投机倒把走偏门——纵然爱走捷径也只能赚点小钱；宜养足底气（印比帮身之运）再图大财。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_wealth_shang_guan_sheng_cai",
@@ -783,11 +1402,22 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShiShen", "value": "伤官", "scope": "stem", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true}
+        {
+          "type": "hasShiShen",
+          "value": "伤官",
+          "scope": "stem",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "伤官生财之人非常敢，思想放得开，带傲气与霸气，赚钱路子野而快。食神生财则含蓄有顾忌；伤官生财者风流敢为，宜做贸易、口才与创意变现，唯须防步子太大。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_wealth_shen_ruo_cai_po_yin",
@@ -796,13 +1426,30 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "verdict", "value": "身弱", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true},
-        {"type": "hasShiShen", "value": "印星", "required": true},
-        {"type": "lacksShiShen", "value": "食伤"}
+        {
+          "type": "verdict",
+          "value": "身弱",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "required": true
+        },
+        {
+          "type": "lacksShiShen",
+          "value": "食伤"
+        }
       ],
       "interpretation": "身弱以印为根基，财来破印则根基受损，主破财，且多为要钱不要命、为财伤身之象。命有食伤通道者可进小财但身体转差；逢印复之运方得喘息。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "hu_marriage_male_wang_qi",
@@ -811,12 +1458,26 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "男", "required": true},
-        {"type": "hasShiShen", "value": "食伤", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true}
+        {
+          "type": "gender",
+          "value": "男",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "男以财为妻，食伤生财者气从我出而养财，对妻子极好，是为旺妻之命。婚缘之动力在食伤：有财无食伤者姻缘待食伤运年引动，有食伤无财者待财运年发动。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_marriage_female_wang_fu",
@@ -825,12 +1486,26 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "女", "required": true},
-        {"type": "hasShiShen", "value": "财星", "required": true},
-        {"type": "hasShiShen", "value": "官杀", "required": true}
+        {
+          "type": "gender",
+          "value": "女",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "官杀",
+          "required": true
+        }
       ],
       "interpretation": "女以官为夫，财生官者以自身财气滋养夫星，是为旺夫之命，婚后夫运渐起。女命婚缘之动力在财星：财旺则姻缘主动，逢财之运年感情发动。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_marriage_female_ri_zhi_shi_shang",
@@ -839,11 +1514,23 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "gender", "value": "女", "required": true},
-        {"type": "hasShiShen", "value": "食伤", "position": "日柱", "scope": "main", "required": true}
+        {
+          "type": "gender",
+          "value": "女",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "position": "日柱",
+          "scope": "main",
+          "required": true
+        }
       ],
       "interpretation": "女命夫妻宫（日支）坐食伤，多为眼光较高之人，所遇男子常入不了眼、非其理想对象。并非无缘，而是标准苛刻；放下完美滤镜、重内在合拍，姻缘自顺。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_marriage_female_shao_nai_nai",
@@ -852,13 +1539,31 @@
       "weight": 7,
       "minMatchRatio": 0.75,
       "conditions": [
-        {"type": "gender", "value": "女", "required": true},
-        {"type": "verdict", "value": "身弱", "required": true},
-        {"type": "hasShiShen", "value": "正官", "required": true},
-        {"type": "hasShiShen", "value": "印星", "required": true}
+        {
+          "type": "gender",
+          "value": "女",
+          "required": true
+        },
+        {
+          "type": "verdict",
+          "value": "身弱",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "正官",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "required": true
+        }
       ],
       "interpretation": "女命身弱而官印相生，官星生印护身：在外是高级主管之才，在家则有少奶奶之福，丈夫与长辈皆疼爱，长辈缘极佳，年龄差距越大越得照拂。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_edu_xue_zhe_ming",
@@ -867,12 +1572,26 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "verdict", "value": "身强", "required": true},
-        {"type": "hasShiShen", "value": "食伤", "required": true},
-        {"type": "lacksShiShen", "value": "财星", "required": true}
+        {
+          "type": "verdict",
+          "value": "身强",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "required": true
+        },
+        {
+          "type": "lacksShiShen",
+          "value": "财星",
+          "required": true
+        }
       ],
       "interpretation": "身旺用食伤而命中无财，读书一流，是学者之命：才华不为钱财所夺，多才多艺，琴棋书画样样能上手。逢财之运年则易把知识变现或改行经商，学术之心随之分散。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_edu_shen_ruo_yong_yin",
@@ -881,11 +1600,21 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "verdict", "value": "身弱", "required": true},
-        {"type": "hasShiShen", "value": "印星", "required": true}
+        {
+          "type": "verdict",
+          "value": "身弱",
+          "required": true
+        },
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "required": true
+        }
       ],
       "interpretation": "读书要能安定静心（印）又能理解表达（食伤）。身弱以印为用者，幼年行印运学习必佳，长辈师长助力大；印不受伤是前提，早遇财运破印则早熟分心、影响学业。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 2,
+      "layer": "原局"
     },
     {
       "id": "hu_health_shen_wang_wu_xie",
@@ -894,11 +1623,21 @@
       "weight": 6,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "verdict", "value": "身强", "required": true},
-        {"type": "lacksShiShen", "value": "食伤", "required": true}
+        {
+          "type": "verdict",
+          "value": "身强",
+          "required": true
+        },
+        {
+          "type": "lacksShiShen",
+          "value": "食伤",
+          "required": true
+        }
       ],
       "interpretation": "身旺而全局无食伤宣泄，旺气无处可去，气机郁滞：性格上固执、情绪易压抑郁闷，健康上防肝气不舒、情志之疾。宜运动、倾诉、创作等主动开泄之道，逢食伤之运年身心俱畅。",
-      "source": "胡一鸣八字命理"
+      "source": "胡一鸣八字命理",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "health_mu_ruo",
@@ -906,9 +1645,19 @@
       "title": "木气失衡·肝胆",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "木", "op": "<=", "threshold": 8, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "木",
+          "op": "<=",
+          "threshold": 8,
+          "required": true
+        }
+      ],
       "interpretation": "木主肝胆、筋脉与目。命中木气过弱，平日宜留意肝胆功能、视力疲劳与筋骨柔韧，戒怒少熬夜，作息顺应春生之气，多舒展运动。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "health_huo_ruo",
@@ -916,9 +1665,19 @@
       "title": "火气失衡·心血",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "火", "op": "<=", "threshold": 8, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "火",
+          "op": "<=",
+          "threshold": 8,
+          "required": true
+        }
+      ],
       "interpretation": "火主心与血脉、小肠。命中火气过弱，宜留意心血循环、手足冰冷与精神倦怠之象，起居宜暖，适度有氧运动以振心阳。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "health_tu_ruo",
@@ -926,9 +1685,19 @@
       "title": "土气失衡·脾胃",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "土", "op": "<=", "threshold": 8, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "土",
+          "op": "<=",
+          "threshold": 8,
+          "required": true
+        }
+      ],
       "interpretation": "土主脾胃、肌肉与消化。命中土气过弱，饮食宜定时温和，忌生冷暴食；思虑伤脾，烦事宜放，脾胃安则气血生化有源。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "health_jin_ruo",
@@ -936,9 +1705,19 @@
       "title": "金气失衡·肺呼吸",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "金", "op": "<=", "threshold": 8, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "金",
+          "op": "<=",
+          "threshold": 8,
+          "required": true
+        }
+      ],
       "interpretation": "金主肺与呼吸道、大肠及皮毛。命中金气过弱，宜防呼吸道敏感、皮肤干燥之症，秋燥时节尤需养肺，常练深呼吸、少居污浊之气。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "health_shui_ruo",
@@ -946,9 +1725,19 @@
       "title": "水气失衡·肾泌尿",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "elementPercent", "value": "水", "op": "<=", "threshold": 8, "required": true}],
+      "conditions": [
+        {
+          "type": "elementPercent",
+          "value": "水",
+          "op": "<=",
+          "threshold": 8,
+          "required": true
+        }
+      ],
       "interpretation": "水主肾与膀胱、耳与骨髓。命中水气过弱，宜防肾气不足、腰膝酸软与耳鸣之象，忌纵欲熬夜，冬藏之季尤宜早卧固本。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "health_xing_chong_duo",
@@ -956,9 +1745,17 @@
       "title": "刑冲交集",
       "weight": 6,
       "minMatchRatio": 1.0,
-      "conditions": [{"type": "interactionCount", "count": 3, "required": true}],
+      "conditions": [
+        {
+          "type": "interactionCount",
+          "count": 3,
+          "required": true
+        }
+      ],
       "interpretation": "四柱刑冲害交集，五行气机多有阻滞碰撞。健康上易有磕碰外伤、慢性劳损之扰，起居宜稳，高风险运动与劳顿奔波需节制。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
     },
     {
       "id": "health_yang_ren_chong",
@@ -967,11 +1764,21 @@
       "weight": 7,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "hasShenSha", "value": "羊刃", "required": true},
-        {"type": "hasInteraction", "value": "地支六冲", "required": true}
+        {
+          "type": "hasShenSha",
+          "value": "羊刃",
+          "required": true
+        },
+        {
+          "type": "hasInteraction",
+          "value": "地支六冲",
+          "required": true
+        }
       ],
       "interpretation": "羊刃主刀兵之气，再逢地支相冲，气血冲激之象。宜防外伤手术、跌打血光，驾车操械尤需谨慎；献血体检反为化解之道。",
-      "source": "三命通会"
+      "source": "三命通会",
+      "tier": 3,
+      "layer": "原局"
     },
     {
       "id": "health_zhong_he_kang_jian",
@@ -980,10 +1787,288 @@
       "weight": 5,
       "minMatchRatio": 1.0,
       "conditions": [
-        {"type": "verdict", "value": "中和", "required": true}
+        {
+          "type": "verdict",
+          "value": "中和",
+          "required": true
+        }
       ],
       "interpretation": "五行大体中和流通，先天体质根基良好，气血调和，少大病之虞。养生贵在守常：饮食有节、起居有时，则天年可期。",
-      "source": "经验总结"
+      "source": "经验总结",
+      "tier": 1,
+      "layer": "原局"
+    },
+    {
+      "id": "luck_year_guan_activated",
+      "category": "事业",
+      "title": "流年引动官星",
+      "weight": 8,
+      "minMatchRatio": 1.0,
+      "layer": "流年",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "hasShiShen",
+          "value": "官杀",
+          "scope": "any",
+          "required": true
+        },
+        {
+          "type": "luckShiShen",
+          "value": "官杀",
+          "layer": "流年",
+          "scope": "main",
+          "required": true
+        }
+      ],
+      "interpretation": "原局官杀有根，流年再引官杀之气，为职位、责任、管束之事发动之象。身能任官则主升迁、承担、考取；身弱不胜官杀则主压力、是非、受制于人。此为流年层主题，须再看流月何时切入。",
+      "source": "子平真诠"
+    },
+    {
+      "id": "luck_year_cai_activated",
+      "category": "财富",
+      "title": "流年引动财星",
+      "weight": 8,
+      "minMatchRatio": 1.0,
+      "layer": "流年",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "hasShiShen",
+          "value": "财星",
+          "scope": "any",
+          "required": true
+        },
+        {
+          "type": "luckShiShen",
+          "value": "财星",
+          "layer": "流年",
+          "scope": "main",
+          "required": true
+        }
+      ],
+      "interpretation": "原局财星有根，流年财气再临，主收入、交易、置产之事发动。身旺任财则得财；身弱财多则财来伤身，反主劳碌破耗。若原局比劫旺而无食伤通关，流年财星易被分夺。",
+      "source": "渊海子平"
+    },
+    {
+      "id": "luck_year_yin_activated",
+      "category": "学历",
+      "title": "流年引动印星",
+      "weight": 7,
+      "minMatchRatio": 1.0,
+      "layer": "流年",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "hasShiShen",
+          "value": "印星",
+          "scope": "any",
+          "required": true
+        },
+        {
+          "type": "luckShiShen",
+          "value": "印星",
+          "layer": "流年",
+          "scope": "main",
+          "required": true
+        }
+      ],
+      "interpretation": "流年印星得力，主文书、学业、资格、庇荫之事。身弱用印者此年得贵人扶助、宜进修考试；身旺印重者反主拖沓依赖、消息虽多而少行动。",
+      "source": "三命通会"
+    },
+    {
+      "id": "luck_year_shishang_activated",
+      "category": "事业",
+      "title": "流年引动食伤",
+      "weight": 7,
+      "minMatchRatio": 1.0,
+      "layer": "流年",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "hasShiShen",
+          "value": "食伤",
+          "scope": "any",
+          "required": true
+        },
+        {
+          "type": "luckShiShen",
+          "value": "食伤",
+          "layer": "流年",
+          "scope": "main",
+          "required": true
+        }
+      ],
+      "interpretation": "流年食伤透显，主表达、创作、技艺、子女之事，亦主离职另谋。身旺得泄为秀气流行，才华显达；身弱再泄则耗神伤身。若原局有官而流年伤官并透，须防冲撞上司、契约生变。",
+      "source": "子平真诠"
+    },
+    {
+      "id": "luck_year_clash_day_branch",
+      "category": "婚姻",
+      "title": "流年冲动夫妻宫",
+      "weight": 9,
+      "minMatchRatio": 1.0,
+      "layer": "流年",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "luckInteraction",
+          "value": "地支六冲",
+          "layer": "流年",
+          "position": "日柱",
+          "required": true
+        }
+      ],
+      "interpretation": "流年之支冲日支，夫妻宫被撼动。已婚者主聚少离多、口角、外出奔波，甚者感情生变；未婚者反主动象——冲则动，逢冲之年多有相识、成婚之机。吉凶取决于所冲者为喜为忌，不可一概断凶。",
+      "source": "渊海子平"
+    },
+    {
+      "id": "luck_year_combine_day_branch",
+      "category": "婚姻",
+      "title": "流年合动夫妻宫",
+      "weight": 7,
+      "minMatchRatio": 1.0,
+      "layer": "流年",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "luckInteraction",
+          "value": "地支六合",
+          "layer": "流年",
+          "position": "日柱",
+          "required": true
+        }
+      ],
+      "interpretation": "流年之支合日支，夫妻宫被合。合为拘绊亦为亲近：主情感牵连、同居成婚之机，或有第三者介入之绊。合去喜神则功能反受拘束，须看合化何物。",
+      "source": "三命通会"
+    },
+    {
+      "id": "luck_year_clash_month_branch",
+      "category": "整体命局",
+      "title": "流年冲提纲",
+      "weight": 9,
+      "minMatchRatio": 1.0,
+      "layer": "流年",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "luckInteraction",
+          "value": "地支六冲",
+          "layer": "流年",
+          "position": "月柱",
+          "required": true
+        }
+      ],
+      "interpretation": "月令为格局所出，流年冲月支即动摇格局根本。主环境、职务、居所之大变，事业格局重新洗牌。格成而被冲则吉处藏凶；格败而被冲，反有转机。",
+      "source": "子平真诠"
+    },
+    {
+      "id": "luck_decade_clash_month_branch",
+      "category": "整体命局",
+      "title": "大运冲提纲",
+      "weight": 9,
+      "minMatchRatio": 1.0,
+      "layer": "大运",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "luckInteraction",
+          "value": "地支六冲",
+          "layer": "大运",
+          "position": "月柱",
+          "required": true
+        }
+      ],
+      "interpretation": "大运冲月令，一运十年格局受动，非一时之事。主此十年内根基迁移、行业转换、离乡背井，为人生大关口。须以原局格局成败定其吉凶轻重。",
+      "source": "子平真诠"
+    },
+    {
+      "id": "luck_decade_cai_for_weak",
+      "category": "财富",
+      "title": "身弱行财运·财多身弱之应",
+      "weight": 8,
+      "minMatchRatio": 1.0,
+      "layer": "大运",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "verdict",
+          "value": "身弱",
+          "required": true
+        },
+        {
+          "type": "luckShiShen",
+          "value": "财星",
+          "layer": "大运",
+          "scope": "main",
+          "required": true
+        }
+      ],
+      "interpretation": "身弱而大运再行财地，财旺身衰，力不胜任。主此运内为钱财所困、劳碌奔波、投资失据，若原局印星复被财破，尤须防因财损身、因利伤和。宜借比劫之力（合伙、依附）而不宜独任。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "luck_decade_shishang_for_strong",
+      "category": "事业",
+      "title": "身旺行食伤运·秀气流行",
+      "weight": 8,
+      "minMatchRatio": 1.0,
+      "layer": "大运",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "verdict",
+          "value": "身强",
+          "required": true
+        },
+        {
+          "type": "luckShiShen",
+          "value": "食伤",
+          "layer": "大运",
+          "scope": "main",
+          "required": true
+        }
+      ],
+      "interpretation": "身旺得食伤之运，旺气有泄，为秀气流行之象。主才华得展、技艺成名、创业有成；若更行财地则食伤生财，获利尤厚。此为身旺之命最宜之运。",
+      "source": "胡一鸣八字命理"
+    },
+    {
+      "id": "luck_month_punish",
+      "category": "健康",
+      "title": "流月刑伤入局",
+      "weight": 6,
+      "minMatchRatio": 1.0,
+      "layer": "流月",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "luckKind",
+          "value": "刑伤",
+          "layer": "流月",
+          "required": true
+        }
+      ],
+      "interpretation": "流月带刑入原局，主一月之内的摩擦、损伤、官非、术疾之应。刑主内耗与纠缠，多见于文书争执、身体旧患复发。此为月层小应，须与流年大势合看，不可越级论大事。",
+      "source": "三命通会"
+    },
+    {
+      "id": "luck_day_clash_trigger",
+      "category": "整体命局",
+      "title": "流日冲动·应期之日",
+      "weight": 5,
+      "minMatchRatio": 1.0,
+      "layer": "流日",
+      "tier": 4,
+      "conditions": [
+        {
+          "type": "luckKind",
+          "value": "冲动",
+          "layer": "流日",
+          "required": true
+        }
+      ],
+      "interpretation": "流日之冲只作引动之用：冲则事发，应在当日。然流日不能凭空生事，所引动者必是流年流月已成之势；若年月无此象，流日之冲不过一日之扰动，不必深断。",
+      "source": "胡一鸣八字命理"
     }
   ]
 }

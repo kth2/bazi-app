@@ -32,6 +32,10 @@ dependencies:
   # Date formatting / localization
   intl: ^0.20.2
 
+  # Browser APIs for the case-journal file download (web build only; the
+  # non-web path writes through dart:io instead)
+  web: ^1.1.1
+
   # Chinese font support (Noto Sans SC / Noto Serif SC)
   google_fonts: ^6.3.2
 

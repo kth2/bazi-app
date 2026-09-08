@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../analysis/temporal_context.dart';
 import 'rule.dart';
 
 part 'rules_db.g.dart';
@@ -18,6 +19,12 @@ class RuleRows extends Table {
   TextColumn get conditionsJson => text()();
   TextColumn get interpretation => text()();
   TextColumn get source => text()();
+
+  /// Temporal layer the rule speaks about (原局/大运/流年/流月/流日).
+  TextColumn get layer => text().withDefault(const Constant('原局'))();
+
+  /// Reasoning tier: 1 基础事实 / 2 命局结构 / 3 格局成败 / 4 岁运引动.
+  IntColumn get tier => integer().withDefault(const Constant(1))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -39,7 +46,20 @@ class RulesDatabase extends _$RulesDatabase {
   RulesDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  /// The rule table is a cache of the bundled asset, never user data, so the
+  /// correct migration is simply to drop it and let [loadRules] reseed.
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          await m.deleteTable(ruleRows.actualTableName);
+          await m.createTable(ruleRows);
+          await (delete(metaRows)..where((t) => t.key.equals('seedVersion')))
+              .go();
+        },
+      );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -81,6 +101,8 @@ class RulesDatabase extends _$RulesDatabase {
           ],
           interpretation: r.interpretation,
           source: r.source,
+          layer: temporalLayerFromName(r.layer),
+          tier: r.tier,
         ),
     ];
   }
@@ -105,6 +127,8 @@ class RulesDatabase extends _$RulesDatabase {
                   jsonEncode(rule.conditions.map((c) => c.toJson()).toList()),
               interpretation: rule.interpretation,
               source: rule.source,
+              layer: Value(rule.layer.label),
+              tier: Value(rule.tier),
             ),
         ]);
       });

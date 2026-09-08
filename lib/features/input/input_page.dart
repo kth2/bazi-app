@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/engine/ganzhi_date_finder.dart';
 import '../../core/models/birth_input.dart';
 import '../../providers/birth_input_provider.dart';
+import '../../providers/case_provider.dart';
 import '../../theme.dart';
+import '../cases/case_list_page.dart';
 import '../chart/chart_page.dart';
 
 /// How the birth moment is entered: by calendar date (default) or by the
@@ -136,7 +138,25 @@ class _InputPageState extends ConsumerState<InputPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('八字排盘')),
+      appBar: AppBar(
+        title: const Text('八字排盘'),
+        actions: [
+          Consumer(builder: (context, ref, _) {
+            final due = ref.watch(dueCaseCountProvider);
+            return IconButton(
+              tooltip: due > 0 ? '案例库（$due 条待回填）' : '案例库',
+              icon: Badge(
+                isLabelVisible: due > 0,
+                label: Text('$due'),
+                child: const Icon(Icons.inventory_2_outlined),
+              ),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CaseListPage()),
+              ),
+            );
+          }),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),

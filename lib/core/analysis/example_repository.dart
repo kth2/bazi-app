@@ -4,6 +4,32 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import 'analysis_example.dart';
 
+/// One retrieved example plus how it was retrieved.
+///
+/// The distinction matters: an example that shares no structure with the
+/// chart is style reference only, and presenting it the same way as a genuine
+/// structural analogue invites the reader — and the model — to treat an
+/// unrelated case's outcome as evidence.
+class ExampleMatch {
+  final AnalysisExample example;
+
+  /// Weighted tag-overlap score; 0 for fallback picks.
+  final int score;
+
+  /// True when nothing overlapped and this was chosen purely for its prose.
+  final bool isFallback;
+
+  const ExampleMatch({
+    required this.example,
+    required this.score,
+    required this.isFallback,
+  });
+
+  /// Which 格局 tags this case actually shares with the chart.
+  Set<String> sharedWith(Set<String> chartTags) =>
+      example.tags.intersection(chartTags);
+}
+
 /// Loads the bundled analysis examples and finds the most similar ones
 /// for a given chart pattern.
 class ExampleRepository {
@@ -23,11 +49,9 @@ class ExampleRepository {
   /// For tests: inject examples directly.
   void seedForTesting(List<AnalysisExample> examples) => _cache = examples;
 
-  /// Rank examples by weighted tag overlap with [chartTags].
-  /// 格局 match ×3, special-scenario ×2, generic (身强/身弱) ×1.
-  /// Returns the top [max] with score > 0; if none overlap, returns the
-  /// [max] longest examples as pure style reference.
-  Future<List<AnalysisExample>> findSimilar(
+  /// Rank examples by weighted tag overlap with [chartTags], reporting
+  /// whether each result is a genuine structural match or a fallback.
+  Future<List<ExampleMatch>> findMatches(
     Set<String> chartTags, {
     int max = 2,
   }) async {
@@ -55,12 +79,29 @@ class ExampleRepository {
     final scored = [for (final e in all) (e, score(e))]
       ..sort((a, b) => b.$2.compareTo(a.$2));
 
-    final hits = scored.where((x) => x.$2 > 0).take(max).map((x) => x.$1);
-    if (hits.isNotEmpty) return hits.toList();
+    final hits = scored.where((x) => x.$2 > 0).take(max);
+    if (hits.isNotEmpty) {
+      return [
+        for (final h in hits)
+          ExampleMatch(example: h.$1, score: h.$2, isFallback: false),
+      ];
+    }
 
     // No analogous case: fall back to the richest texts as style reference.
+    // Flagged so the prompt can say so rather than presenting an unrelated
+    // 命造 under the same heading as a real structural parallel.
     final byLength = [...all]
       ..sort((a, b) => b.content.length.compareTo(a.content.length));
-    return byLength.take(max).toList();
+    return [
+      for (final e in byLength.take(max))
+        ExampleMatch(example: e, score: 0, isFallback: true),
+    ];
   }
+
+  /// Convenience wrapper for callers that only need the examples.
+  Future<List<AnalysisExample>> findSimilar(
+    Set<String> chartTags, {
+    int max = 2,
+  }) async =>
+      [for (final m in await findMatches(chartTags, max: max)) m.example];
 }
