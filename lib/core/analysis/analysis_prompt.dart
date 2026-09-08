@@ -62,6 +62,9 @@ class AnalysisPrompt {
         '并说明它如何落到具体人事；不得凭空另起一个命理依据');
     buf.writeln('- 【事件候选】给的是事件「类别」，你的工作是把它讲成这个人身上'
         '具体会发生什么、以何种方式发生、当事人该如何应对');
+    buf.writeln('- 吉者言吉，凶者言凶：候选标为「吉」的，就要写成好事，'
+        '不要一律加上转折与告诫；标为「凶」的也不必粉饰。'
+        '古法论命有成有败，不是逢断必凶');
     if (depth == TemporalLayer.day) {
       buf.writeln('- 明确指出当日吉凶程度与最可能的事件类型（如签约、面试、口角、'
           '破财、身体不适），并给出宜忌建议');
@@ -95,6 +98,10 @@ class AnalysisPrompt {
         '不要含糊两可');
     buf.writeln('- 若问题给出多个选项，必须先明确指出最可能的一项（如「答案：第X项」），'
         '再逐条说明各选项的可能性高低及命理依据');
+    buf.writeln('- 选项题不得默认取较差、较低、较悲观的一项。'
+        '富贵与贫贱、吉与凶，一律以上方【引擎净评估】与具体干支作用为准：'
+        '命局显吉就选吉的一项，显凶才选凶的一项。'
+        '若两项皆有理，说明何者更重并给出取舍依据');
     buf.writeln('- 若问题涉及时间，直接引用上方【应期】所排的窗口，'
         '不要另行推算或指定其他日期');
     buf.writeln('- 若上方推演不足以回答该问题，坦诚说明并给出倾向性判断，不可编造');
@@ -130,6 +137,24 @@ class AnalysisPrompt {
     _writeActivations(buf, report);
     _writeEvents(buf, report);
     _writeYingQi(buf, report);
+    _writeAssessment(buf, report);
+  }
+
+  /// The engine's own net 吉凶, stated last so it is the final thing read.
+  ///
+  /// The narrative layer was previously free to contradict the deterministic
+  /// one without saying so, and did: on charts whose candidates were entirely
+  /// 吉 it still answered 破财. It may still disagree — but it has to declare
+  /// that it is disagreeing, and say on what 干支 grounds.
+  static void _writeAssessment(StringBuffer buf, ReasoningReport report) {
+    final a = report.assessment;
+    if (!a.hasSignal) return;
+    buf.writeln('【引擎净评估——结论须与此一致】');
+    buf.writeln(a.summary);
+    buf.writeln('这是上方推演逐条累加的结果，不是印象。你的结论应与此倾向相符。');
+    buf.writeln('若你判断与此相反，必须明写「与引擎净评估相反」并指出依据哪一条'
+        '干支作用推翻它；不得在没有具体依据的情况下，一律取较坏的解释。');
+    buf.writeln();
   }
 
   static void _writeGuardrails(StringBuffer buf) {
@@ -153,9 +178,10 @@ class AnalysisPrompt {
     buf.writeln('【案例参考】');
     buf.writeln('案例的作用是示范「同类结构如何论证」与行文口吻，'
         '不是本命的预测依据。');
-    buf.writeln('※ 严禁以案例的结局外推本命：案例中某人升职、发财、离婚，'
-        '都不构成本命会发生同样事情的理由。'
+    buf.writeln('※ 案例只示范推理方法。其结局未予提供，也不得据以推断本命：'
         '本命应验与否，只由本命局的格局成败与岁运引动决定。');
+    buf.writeln('※ 案例语料以疑难、破格之造居多，这是取材使然，'
+        '不代表命造多凶。不可因此默认本命亦凶。');
     if (allFallback) {
       buf.writeln('※ 注意：本命局与语料库中各案例的格局结构并不相同，'
           '以下案例仅供行文与论证方式参考，其命理结论与本命无关，不可比附。');
@@ -172,10 +198,13 @@ class AnalysisPrompt {
         buf.writeln('命造：${e.qianZao}  大运：${e.daYun ?? ''}');
       }
       buf.writeln('分析原文：${_truncate(e.content, 900)}');
-      if (e.feedback != null) {
-        buf.writeln('该案例的实际反馈（仅说明该案例本身，'
-            '不可作为本命的推断依据）：${e.feedback}');
-      }
+      // The corpus's 实际反馈 is deliberately NOT included. Ten of the
+      // thirteen cases end in 破财/离婚/负债/疾病, and injecting those outcomes
+      // into every prompt taught a base rate — "when a master reads a chart,
+      // the answer is bad" — that showed up as the model answering the
+      // pessimistic option on 24 of 26 A/B questions, including charts whose
+      // own candidates were entirely 吉. The reasoning is what these cases are
+      // here to demonstrate; their endings are not.
       buf.writeln();
     }
   }

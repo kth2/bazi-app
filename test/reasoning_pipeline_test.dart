@@ -159,6 +159,19 @@ void main() {
       expect(natalOnly.evidenceByTier.containsKey(4), isFalse);
     });
 
+    test('the report carries a net verdict downstream can be held to', () {
+      final a = report.assessment;
+      expect(a.hasSignal, isTrue);
+      expect(a.summary, contains('综合倾向'));
+      expect(['整体偏吉', '整体偏凶', '吉凶相当'], contains(a.lean));
+      // The lean must follow the counted evidence, not be asserted.
+      final expected = (a.favourableEvents - a.adverseEvents) +
+          (a.favourableWindows - a.adverseWindows);
+      expect(a.net, expected);
+      expect(a.lean,
+          expected > 0 ? '整体偏吉' : (expected < 0 ? '整体偏凶' : '吉凶相当'));
+    });
+
     test('every event maps to one of the four output sections', () {
       const sections = {'事业财富', '婚姻感情', '学习/发展', '健康分析'};
       for (final e in report.events) {

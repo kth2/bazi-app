@@ -9,6 +9,52 @@ import 'pattern_detector.dart';
 import 'temporal_context.dart';
 import 'yingqi_engine.dart';
 
+/// The engine's own net 吉凶 for a scope.
+///
+/// Exists so the narrative layer can be held to what the deterministic layer
+/// actually found. Without it the model was free to answer 破财 on a chart
+/// whose candidates were entirely 吉 — which is what it did.
+class EngineAssessment {
+  final int favourableEvents;
+  final int adverseEvents;
+  final int mixedEvents;
+  final int favourableWindows;
+  final int adverseWindows;
+
+  const EngineAssessment({
+    required this.favourableEvents,
+    required this.adverseEvents,
+    required this.mixedEvents,
+    required this.favourableWindows,
+    required this.adverseWindows,
+  });
+
+  int get net =>
+      (favourableEvents - adverseEvents) + (favourableWindows - adverseWindows);
+
+  /// 整体偏吉 / 整体偏凶 / 吉凶相当.
+  String get lean =>
+      net > 0 ? '整体偏吉' : (net < 0 ? '整体偏凶' : '吉凶相当');
+
+  bool get hasSignal =>
+      favourableEvents + adverseEvents + mixedEvents +
+          favourableWindows + adverseWindows >
+      0;
+
+  String get summary => '事件候选：吉 $favourableEvents / 凶 $adverseEvents / '
+      '吉凶参半 $mixedEvents；应期窗口：偏吉 $favourableWindows / '
+      '偏凶 $adverseWindows；综合倾向：$lean';
+
+  Map<String, dynamic> toJson() => {
+        'favourableEvents': favourableEvents,
+        'adverseEvents': adverseEvents,
+        'mixedEvents': mixedEvents,
+        'favourableWindows': favourableWindows,
+        'adverseWindows': adverseWindows,
+        'lean': lean,
+      };
+}
+
 /// The complete deterministic reasoning chain for one scope.
 ///
 ///     原局 → 格局 → 成败 → 用神/相神/忌神 → 调候
@@ -72,6 +118,33 @@ class ReasoningReport {
     );
   }
 
+  /// What the deterministic layer concluded, on balance.
+  EngineAssessment get assessment {
+    var fav = 0, adv = 0, mix = 0;
+    for (final e in events) {
+      switch (e.polarity) {
+        case EventPolarity.favourable:
+          fav++;
+        case EventPolarity.adverse:
+          adv++;
+        case EventPolarity.mixed:
+          mix++;
+      }
+    }
+    var favW = 0, advW = 0;
+    for (final w in yingQi.top) {
+      if (w.verdict == '偏吉') favW++;
+      if (w.verdict == '偏凶') advW++;
+    }
+    return EngineAssessment(
+      favourableEvents: fav,
+      adverseEvents: adv,
+      mixedEvents: mix,
+      favourableWindows: favW,
+      adverseWindows: advW,
+    );
+  }
+
   /// Evidence grouped by reasoning tier, coarse → fine.
   Map<int, List<RuleMatch>> get evidenceByTier {
     final out = <int, List<RuleMatch>>{};
@@ -94,6 +167,7 @@ class ReasoningReport {
       [for (final a in activations) if (a.layer == context.depth) a];
 
   Map<String, dynamic> toJson() => {
+        'assessment': assessment.toJson(),
         'structure': structure.toJson(),
         'temporal': context.toJson(),
         'activations': activations.take(12).map((a) => a.toJson()).toList(),
