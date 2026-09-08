@@ -1,0 +1,92 @@
+name: CI / Deploy PWA
+
+# Every push to main rebuilds and republishes the PWA to GitHub Pages.
+# Pull requests get the same checks without deploying.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Never let two deploys race for the gh-pages branch.
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  # Matches the Dart SDK constraint in pubspec.yaml (^3.12.0).
+  FLUTTER_VERSION: 3.44.9
+  BASE_HREF: /bazi-app/
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Third-party action, pinned to a major tag. It is the de-facto standard
+      # for Flutter CI and brings SDK caching, which a manual tarball download
+      # does not.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build web
+        run: |
+          flutter build web --release \
+            --base-href "$BASE_HREF" \
+            --dart-define=APP_BUILD_ID=${{ github.sha }}
+
+      # Same guard deploy.sh applies locally: a wrong base href produces a
+      # blank page on Pages, and it is easy to miss until users report it.
+      - name: Verify base href
+        run: |
+          grep -q "<base href=\"$BASE_HREF\">" build/web/index.html \
+            || { echo "::error::index.html base href is not $BASE_HREF"; exit 1; }
+
+      # The running app polls this to notice it is out of date. It must be the
+      # same id compiled into the build above, or the app will either never
+      # update or prompt forever.
+      - name: Stamp build id
+        run: |
+          printf '{"buildId":"%s","builtAt":"%s","ref":"%s"}\n' \
+            "${{ github.sha }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${{ github.ref_name }}" \
+            > build/web/build.json
+          cat build/web/build.json
+
+      - name: Publish to gh-pages
+        if: github.event_name != 'pull_request'
+        run: |
+          cd build/web
+          touch .nojekyll
+          git init -b gh-pages -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "deploy ${GITHUB_SHA} ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push -f \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            gh-pages
+
+      - name: Summary
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "### Deployed :rocket:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Live: https://kth2.github.io/bazi-app/" >> "$GITHUB_STEP_SUMMARY"
