@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/cases/case_export.dart';
 import '../../core/cases/case_record.dart';
 import '../../providers/case_provider.dart';
 import '../../theme.dart';
@@ -117,6 +118,26 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
         .showSnackBar(const SnackBar(content: Text('已保存回填结果')));
   }
 
+  /// Exports just this case, in the same envelope the whole-journal export
+  /// uses, so a single shared file reads back the same way.
+  Future<void> _exportThisCase() async {
+    final r = _record;
+    if (r == null) return;
+    try {
+      final message = await CaseExport.save(
+        CaseExport.filenameForCase(r.baziString, DateTime.now()),
+        CaseRecord.encodeExport([r]),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('导出失败：$e')));
+    }
+  }
+
   Future<void> _confirmDelete() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -161,6 +182,11 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
       appBar: AppBar(
         title: Text(r.title.isEmpty ? '案例回填' : r.title),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: '导出此案例为 JSON 文件',
+            onPressed: _exportThisCase,
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: '删除案例',

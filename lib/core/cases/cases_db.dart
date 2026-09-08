@@ -189,19 +189,11 @@ class CaseRepository implements CaseStore {
   /// Export exists so accumulated cases can be reviewed by a person — the
   /// engine never reads them back.
   @override
-  Future<String> exportJson() async {
-    final records = await all();
-    return jsonEncodePretty({
-      'exportedAt': DateTime.now().toIso8601String(),
-      'count': records.length,
-      'cases': [for (final r in records) r.toJson()],
-    });
-  }
+  Future<String> exportJson() async =>
+      CaseRecord.encodeExport(await all());
 }
 
 Object jsonDecodeMap(String raw) => jsonDecode(raw);
 
 String jsonEncodeMap(Map<String, dynamic> map) => jsonEncode(map);
 
-String jsonEncodePretty(Map<String, dynamic> map) =>
-    const JsonEncoder.withIndent('  ').convert(map);

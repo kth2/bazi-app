@@ -497,6 +497,21 @@ class CaseRecord {
   int newQaCount(List<(String question, String answer)> pairs) =>
       withQa(pairs).claims.length - claims.length;
 
+  /// The shared on-disk shape for exports.
+  ///
+  /// A single-case export and a whole-journal export use the same envelope, so
+  /// the two are interchangeable to anything reading them back.
+  static Map<String, dynamic> exportEnvelope(List<CaseRecord> records) => {
+        'format': 'bazi-app.cases',
+        'version': 1,
+        'exportedAt': DateTime.now().toIso8601String(),
+        'count': records.length,
+        'cases': [for (final r in records) r.toJson()],
+      };
+
+  static String encodeExport(List<CaseRecord> records) =>
+      const JsonEncoder.withIndent('  ').convert(exportEnvelope(records));
+
   static String encodeClaims(List<PredictedClaim> claims) =>
       jsonEncode([for (final c in claims) c.toJson()]);
 

@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:bazi_app/core/analysis/reasoning_report.dart';
+import 'package:bazi_app/core/cases/case_export.dart';
 import 'package:bazi_app/core/cases/case_record.dart';
 import 'package:bazi_app/core/cases/cases_db.dart';
 import 'package:bazi_app/core/engine/chart_service.dart';
@@ -33,6 +34,7 @@ final chart = ChartService.compute(BirthInput(
 ));
 
 void main() {
+  _filenameTests();
   final rules = loadSeedRules();
 
   final decade = chart.decades
@@ -365,6 +367,56 @@ void main() {
       expect(await repo.all(), isEmpty);
     });
 
+    test('a single case exports in the same envelope as the whole journal',
+        () async {
+      await repo.save(newCase(id: 'c1'));
+      await repo.save(newCase(id: 'c2'));
+
+      final whole =
+          jsonDecode(await repo.exportJson()) as Map<String, dynamic>;
+      final single = jsonDecode(
+              CaseRecord.encodeExport([(await repo.byId('c1'))!]))
+          as Map<String, dynamic>;
+
+      // Same shape, so anything reading one can read the other.
+      expect(single.keys.toSet(), whole.keys.toSet());
+      expect(whole['format'], 'bazi-app.cases');
+      expect(single['format'], 'bazi-app.cases');
+      expect(whole['count'], 2);
+      expect(single['count'], 1);
+      expect(
+        CaseRecord.fromJson(
+                (single['cases'] as List).first as Map<String, dynamic>)
+            .id,
+        'c1',
+      );
+    });
+
+    test('export writes an actual file that parses back', () async {
+      await repo.save(newCase());
+      final name = CaseExport.filenameFor(DateTime(2026, 8, 14, 15, 30));
+      final message = await CaseExport.save(name, await repo.exportJson());
+
+      // The non-web implementation reports where it wrote.
+      expect(message, contains(name));
+      final path = message.split(' ').last;
+      final file = File(path);
+      addTearDown(() {
+        if (file.existsSync()) file.deleteSync();
+      });
+      expect(file.existsSync(), isTrue);
+
+      final decoded =
+          jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+      expect(decoded['count'], 1);
+      expect(
+        CaseRecord.fromJson(
+                (decoded['cases'] as List).first as Map<String, dynamic>)
+            .baziString,
+        chart.baziString,
+      );
+    });
+
     test('export produces re-importable JSON', () async {
       await repo.save(newCase());
       final raw = await repo.exportJson();
@@ -375,6 +427,31 @@ void main() {
       expect(restored.id, 'c1');
       expect(restored.claims.length, newCase().claims.length);
       expect(restored.input.longitude, closeTo(116.41, 1e-9));
+    });
+  });
+}
+
+/// Filenames end up in a downloads folder and in shared messages, so they
+/// need to be sortable and free of characters a filesystem will object to.
+void _filenameTests() {
+  group('export filenames', () {
+    test('journal filename is sortable and timestamped', () {
+      expect(
+        CaseExport.filenameFor(DateTime(2026, 8, 14, 15, 30)),
+        'bazi_cases_2026-08-14_1530.json',
+      );
+      // Zero-padded, so lexical order matches chronological order.
+      expect(
+        CaseExport.filenameFor(DateTime(2026, 1, 2, 3, 4)),
+        'bazi_cases_2026-01-02_0304.json',
+      );
+    });
+
+    test('single-case filename carries the 八字 without spaces', () {
+      final name = CaseExport.filenameForCase(
+          '己巳 丙子 丙寅 甲午', DateTime(2026, 8, 14));
+      expect(name, 'bazi_case_己巳丙子丙寅甲午_2026-08-14.json');
+      expect(name, isNot(contains(' ')));
     });
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/cases/case_export.dart';
 import '../../core/cases/case_record.dart';
 import '../../providers/case_provider.dart';
 import '../../theme.dart';
@@ -27,7 +28,22 @@ class _CaseListPageState extends ConsumerState<CaseListPage> {
         _Filter.reviewed => c.status(now) == CaseStatus.reviewed,
       };
 
-  Future<void> _export() async {
+  Future<void> _downloadFile() async {
+    final json = await ref.read(caseRepositoryProvider).exportJson();
+    try {
+      final message =
+          await CaseExport.save(CaseExport.filenameFor(DateTime.now()), json);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('导出失败：$e')));
+    }
+  }
+
+  Future<void> _copyToClipboard() async {
     final json = await ref.read(caseRepositoryProvider).exportJson();
     await Clipboard.setData(ClipboardData(text: json));
     if (!mounted) return;
@@ -45,10 +61,32 @@ class _CaseListPageState extends ConsumerState<CaseListPage> {
       appBar: AppBar(
         title: const Text('案例库'),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.ios_share),
-            tooltip: '导出 JSON',
-            onPressed: _export,
+            tooltip: '导出案例库',
+            onSelected: (v) =>
+                v == 'file' ? _downloadFile() : _copyToClipboard(),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'file',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.download),
+                  title: Text('下载 JSON 文件'),
+                  subtitle: Text('可保存、转发、备份'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'clipboard',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.copy),
+                  title: Text('复制到剪贴板'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
