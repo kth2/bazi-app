@@ -16,8 +16,14 @@ BASE_HREF="/bazi-app/"
 
 cd "$(dirname "$0")"
 
-echo "==> Building web release with base-href $BASE_HREF"
-flutter build web --release --base-href "$BASE_HREF"
+# The running app polls build.json to notice it is out of date, comparing it
+# against the id compiled in here. A manual deploy must stamp both, or an app
+# left open will keep prompting (or never prompt) against a stale id.
+BUILD_ID="$(git rev-parse HEAD 2>/dev/null || date -u +manual-%Y%m%d%H%M%S)"
+
+echo "==> Building web release with base-href $BASE_HREF (build $BUILD_ID)"
+flutter build web --release --base-href "$BASE_HREF" \
+  --dart-define=APP_BUILD_ID="$BUILD_ID"
 
 # Sanity check: refuse to deploy a wrong base href.
 if ! grep -q "<base href=\"$BASE_HREF\">" build/web/index.html; then
@@ -25,6 +31,10 @@ if ! grep -q "<base href=\"$BASE_HREF\">" build/web/index.html; then
   exit 1
 fi
 echo "==> base href OK"
+
+printf '{"buildId":"%s","builtAt":"%s","ref":"manual"}\n' \
+  "$BUILD_ID" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build/web/build.json
+echo "==> stamped build.json ($BUILD_ID)"
 
 cd build/web
 touch .nojekyll

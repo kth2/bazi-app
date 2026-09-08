@@ -39,12 +39,33 @@ flutter run -d chrome
 
 ## Deploy (GitHub Pages)
 
+Deployment is automatic: every push to `main` runs analyze + test + build and
+publishes to the `gh-pages` branch via `.github/workflows/deploy.yml`. Pull
+requests run the same checks without deploying.
+
+Live at <https://kth2.github.io/bazi-app/>.
+
+To deploy by hand (emergencies, or from a branch):
+
 ```bash
-flutter build web --release --base-href "/bazi-app/"
-cd build/web
-git init -b gh-pages && git add -A && git commit -m deploy
-git push -f https://github.com/kth2/bazi-app.git gh-pages
+./deploy.sh
 ```
+
+### How the app notices a new deploy
+
+Flutter 3.44's generated service worker unregisters itself on activate, so
+there is no cache layer to hook a conventional PWA update into, and
+`version.json` carries pubspec's static version rather than anything that
+changes per deploy.
+
+Instead each build stamps its commit sha in two places — compiled in with
+`--dart-define=APP_BUILD_ID`, and written to `build.json` next to
+`index.html` — and the running app polls `build.json` and compares. When they
+differ it offers a one-tap reload rather than reloading silently, since the
+case journal holds unsaved feedback in text fields.
+
+Both the workflow and `deploy.sh` stamp the pair together. A build that sets
+one without the other will either never prompt or prompt forever.
 
 ## Calculation engine
 
