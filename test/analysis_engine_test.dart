@@ -195,15 +195,47 @@ void main() {
       expect(prompt, contains('不得自行指定其他日期'));
     });
 
+    test('corpus outcomes are not injected into the prompt', () async {
+      // 10 of the 13 corpus cases end in 破财/离婚/负债/疾病. Injecting those
+      // endings taught a base rate that showed up as the model answering the
+      // pessimistic option on 24 of 26 A/B questions.
+      final prompt = await promptFor(decade: chart1990.decades.first);
+      final examples = loadExamplesFromFile();
+      for (final e in examples) {
+        final fb = e.feedback;
+        if (fb == null || fb.length < 12) continue;
+        expect(prompt, isNot(contains(fb)), reason: e.id);
+      }
+      expect(prompt, isNot(contains('实际反馈')));
+      // The reasoning they exist to demonstrate is still there.
+      expect(prompt, contains('分析原文'));
+      expect(prompt, contains('不代表命造多凶'));
+    });
+
+    test('the engine states its net verdict and binds the answer to it',
+        () async {
+      final decade = chart1990.decades.first;
+      final year = ChartService.flowYearsOf(chart1990, decade).first;
+      final prompt = await promptFor(decade: decade, year: year);
+
+      expect(prompt, contains('【引擎净评估——结论须与此一致】'));
+      expect(prompt, contains('综合倾向：'));
+      // Disagreement is allowed, but must be declared and grounded.
+      expect(prompt, contains('与引擎净评估相反'));
+      expect(prompt, contains('不得在没有具体依据的情况下，一律取较坏的解释'));
+    });
+
+    test('the four-category prompt forbids reflexive gloom', () async {
+      final prompt = await promptFor(decade: chart1990.decades.first);
+      expect(prompt, contains('吉者言吉，凶者言凶'));
+      expect(prompt, contains('不是逢断必凶'));
+    });
+
     test('examples are framed as reasoning references, not evidence',
         () async {
       final prompt = await promptFor(decade: chart1990.decades.first);
       expect(prompt, contains('不是本命的预测依据'));
-      expect(prompt, contains('严禁以案例的结局外推本命'));
-      // 实际反馈 must carry its own disclaimer wherever it appears.
-      if (prompt.contains('实际反馈')) {
-        expect(prompt, contains('不可作为本命的推断依据'));
-      }
+      expect(prompt, contains('其结局未予提供'));
     });
 
     test('a fallback example set is labelled as unrelated', () async {

@@ -28,13 +28,18 @@ class EventDomain {
   static const Map<String, List<String>> subtypes = {
     career: [
       '职位晋升', '权责加重', '职务变动', '离职转换', '创业自立', '职场是非',
-      '迁移变动',
+      '迁移变动', '压力解除', '摆脱束缚', '收束心性',
     ],
-    wealth: ['收入增益', '投资置产', '意外之财', '破财损耗', '因财劳碌', '资产变动'],
+    wealth: [
+      '收入增益', '投资置产', '意外之财', '破财损耗', '因财劳碌', '资产变动',
+      '卸下重负', '免于分夺',
+    ],
     marriage: [
       '婚恋成合', '感情生变', '配偶宫动', '情感牵绊', '第三者之扰', '子女之事',
     ],
-    study: ['文书学业', '考试资格', '技艺才华', '进修拓展', '学途受阻'],
+    study: [
+      '文书学业', '考试资格', '技艺才华', '进修拓展', '学途受阻', '破印得用',
+    ],
     health: ['劳神耗气', '旧患复发', '外伤意外', '情志郁结', '身心失调'],
   };
 }
@@ -188,11 +193,6 @@ class EventInferenceEngine {
       domain: EventDomain.wealth, subtype: '破财损耗',
       polarity: EventPolarity.adverse,
     ),
-    _EventRule(
-      target: '财星', effect: ActivationEffect.weaken,
-      domain: EventDomain.wealth, subtype: '破财损耗',
-      polarity: EventPolarity.adverse,
-    ),
     // 男命以财为妻星.
     _EventRule(
       target: '财星', effect: ActivationEffect.strengthen,
@@ -220,11 +220,6 @@ class EventInferenceEngine {
       target: '印星', effect: ActivationEffect.release,
       domain: EventDomain.study, subtype: '进修拓展',
       polarity: EventPolarity.mixed,
-    ),
-    _EventRule(
-      target: '印星', effect: ActivationEffect.weaken,
-      domain: EventDomain.health, subtype: '情志郁结',
-      polarity: EventPolarity.adverse,
     ),
 
     // ---------------- 食伤 ----------------
@@ -258,6 +253,55 @@ class EventInferenceEngine {
     _EventRule(
       target: '比劫', effect: ActivationEffect.strengthen, stance: 1,
       domain: EventDomain.career, subtype: '创业自立',
+      polarity: EventPolarity.favourable,
+    ),
+
+    // ------- 去忌神则吉 -------
+    //
+    // These are the counterpart the table was missing entirely. An Activation's
+    // stance is already effect-polarity × the chart's 喜忌, so stance == 1 on a
+    // disruptive effect means the 岁运 removed something the 格局 did not want.
+    // 冲去忌神、合去忌神、制其忌神 are all classically favourable; with every
+    // release/damage/bind/weaken rule left stance-agnostic, the engine could
+    // only ever report them as change or loss.
+    _EventRule(
+      target: '官杀', effect: ActivationEffect.release, stance: 1,
+      domain: EventDomain.career, subtype: '压力解除',
+      polarity: EventPolarity.favourable,
+    ),
+    _EventRule(
+      target: '官杀', effect: ActivationEffect.bind, stance: 1,
+      domain: EventDomain.career, subtype: '压力解除',
+      polarity: EventPolarity.favourable,
+    ),
+    _EventRule(
+      target: '官杀', effect: ActivationEffect.damage, stance: 1,
+      domain: EventDomain.career, subtype: '摆脱束缚',
+      polarity: EventPolarity.favourable,
+    ),
+    _EventRule(
+      target: '财星', effect: ActivationEffect.damage, stance: 1,
+      domain: EventDomain.wealth, subtype: '卸下重负',
+      polarity: EventPolarity.favourable,
+    ),
+    _EventRule(
+      target: '印星', effect: ActivationEffect.damage, stance: 1,
+      domain: EventDomain.study, subtype: '破印得用',
+      polarity: EventPolarity.favourable,
+    ),
+    _EventRule(
+      target: '食伤', effect: ActivationEffect.damage, stance: 1,
+      domain: EventDomain.career, subtype: '收束心性',
+      polarity: EventPolarity.favourable,
+    ),
+    _EventRule(
+      target: '比劫', effect: ActivationEffect.damage, stance: 1,
+      domain: EventDomain.wealth, subtype: '免于分夺',
+      polarity: EventPolarity.favourable,
+    ),
+    _EventRule(
+      target: '比劫', effect: ActivationEffect.release, stance: 1,
+      domain: EventDomain.wealth, subtype: '免于分夺',
       polarity: EventPolarity.favourable,
     ),
 
@@ -303,7 +347,24 @@ class EventInferenceEngine {
   ];
 
   /// Below this an event candidate is not worth reporting.
-  static const double _minConfidence = 0.12;
+  ///
+  /// An event needs a substantial relationship behind it — a 大运/流年 level
+  /// 冲合刑 or a 十神 arriving transparently — not a 六破 between two hidden
+  /// traces. The floor was low enough that faint relations became life events.
+  static const double _minConfidence = 0.25;
+
+  /// Effects that describe a standing relation rather than something
+  /// happening.
+  ///
+  /// 克 is continuous — it holds all year, every year — and bazi_core reports
+  /// 天干相克 across most of the chart at once, which is why the activation
+  /// engine already weights it as ambient. Letting it also emit events meant
+  /// every reading picked up background 破财/情志郁结 that no 冲合刑害 had
+  /// actually triggered, and since a chart has more 喜 parties than 忌 ones,
+  /// that background skewed adverse.
+  static const Set<ActivationEffect> _nonEventEffects = {
+    ActivationEffect.weaken,
+  };
 
   static List<EventCandidate> infer({
     required ChartResult chart,
@@ -324,6 +385,8 @@ class EventInferenceEngine {
           !establishedThemes.contains(a.target)) {
         continue;
       }
+
+      if (_nonEventEffects.contains(a.effect)) continue;
 
       for (final r in _rules) {
         if (r.target != a.target) continue;

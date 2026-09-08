@@ -248,7 +248,46 @@ class LuckActivationEngine {
     }
     final deduped = best.values.toList()
       ..sort((a, b) => b.intensity.compareTo(a.intensity));
-    return deduped;
+
+    return _capInteractionsPerLayer(deduped);
+  }
+
+  /// How many interaction-driven activations a single layer may contribute.
+  ///
+  /// 先看流年干支是喜是忌，再看有无冲合刑害: what the 岁运 *brings* (临位) is the
+  /// primary judgement and the relationships modify it. But a 临位 and a single
+  /// 冲 carry the same intensity here, and bazi_core enumerates every pairing
+  /// it can find — 六破, 暗合, 相绝, multi-node groupings — so left uncapped the
+  /// relationships collectively outvote 临位 several times over. Because a
+  /// chart has more 喜 parties than 忌 ones (相神 average ~1.2 per chart against
+  /// ~0.4 忌神), that surplus lands disproportionately on things the 格局
+  /// wanted, and every year reads 偏凶. A practitioner weighs the dominant
+  /// relationships, not all of them.
+  ///
+  /// The principle — relationships modify, they do not outvote — is classical.
+  /// The specific number is not: it was calibrated on a 240-chart grid to the
+  /// point where the engine stops leaning systematically either way (吉:凶 of
+  /// 1.03 at 5, against 0.78 uncapped and 1.22 at 3). Over many charts and one
+  /// year, neither outcome should dominate; a 2:1 skew in either direction is
+  /// a modelling artefact rather than insight. Re-measure with
+  /// test/engine_calibration_test.dart if the weights or rules change.
+  static const int _maxInteractionsPerLayer = 5;
+
+  static List<Activation> _capInteractionsPerLayer(List<Activation> sorted) {
+    final kept = <Activation>[];
+    final countByLayer = <TemporalLayer, int>{};
+    for (final a in sorted) {
+      // 临位 and 调候 describe what the pillar itself is, and are never capped.
+      if (a.effect == ActivationEffect.strengthen || a.targetKind == '调候') {
+        kept.add(a);
+        continue;
+      }
+      final n = countByLayer[a.layer] ?? 0;
+      if (n >= _maxInteractionsPerLayer) continue;
+      countByLayer[a.layer] = n + 1;
+      kept.add(a);
+    }
+    return kept;
   }
 
   static ActivationEffect _effectOf(InteractionKind kind) => switch (kind) {
