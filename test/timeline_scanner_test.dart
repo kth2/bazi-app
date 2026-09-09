@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:bazi_app/core/analysis/activation_engine.dart';
 import 'package:bazi_app/core/analysis/event_inference.dart';
+import 'package:bazi_app/core/analysis/natal_structure.dart';
+import 'package:bazi_app/core/analysis/pattern_detector.dart';
 import 'package:bazi_app/core/engine/chart_service.dart';
 import 'package:bazi_app/core/models/birth_input.dart';
 import 'package:bazi_app/core/models/chart_result.dart';
@@ -37,6 +40,8 @@ List<LifeEvent> scanOf(ChartResult c, {Set<String>? kinds}) =>
     );
 
 void main() {
+  _shenShaTests();
+
   group('the catalog is a faithful translation of the engine', () {
     test('every kind maps onto a subtype the engine can actually produce', () {
       for (final k in EventCatalog.kinds) {
@@ -236,6 +241,81 @@ void main() {
       // ~900 ms per life).
       expect(sw.elapsedMilliseconds, lessThan(1500),
           reason: '${sw.elapsedMilliseconds}ms for ${samples.length} charts');
+    });
+  });
+}
+
+/// The two 神煞 that name an event when they arrive (P5).
+void _shenShaTests() {
+  group('岁运带驿马 / 天乙贵人', () {
+    test('the reading is 岁运带, not 原局带', () {
+      // 原局带驿马 is either true for a whole life or never, and so names no
+      // year. The activation must come from the 岁运 pillar arriving as the
+      // 驿马 of the natal chart.
+      final chart = samples.values.first;
+      final span = LifeSpan.of(chart);
+      final withMarker = <int>[];
+      for (final y in span.years) {
+        final ctx = ChartService.temporalContext(
+          chart,
+          decade: span.decadeAt(y.age.toDouble()),
+          year: y,
+        );
+        final marked = ctx.luckPillars.any((p) => p.shenSha.isNotEmpty);
+        if (marked) withMarker.add(y.age);
+      }
+      expect(withMarker, isNotEmpty,
+          reason: 'no year carries either 神煞 — the lookup is not running');
+      expect(withMarker.length, lessThan(span.years.length),
+          reason: 'every year carries one — this is 原局带, not 岁运带');
+    });
+
+    test('only the two event-bearing 神煞 reach the engine', () {
+      final chart = samples.values.first;
+      final span = LifeSpan.of(chart);
+      for (final y in span.years) {
+        final ctx = ChartService.temporalContext(
+          chart,
+          decade: span.decadeAt(y.age.toDouble()),
+          year: y,
+        );
+        for (final p in ctx.luckPillars) {
+          for (final s in p.shenSha) {
+            expect(LuckActivationEngine.kEventShenSha, contains(s));
+          }
+        }
+      }
+    });
+
+    test('both new kinds actually surface across a spread of charts', () {
+      // A rule that never fires is a rule that does not exist.
+      final seen = <String>{};
+      for (final chart in samples.values) {
+        for (final e in scanOf(chart)) {
+          seen.add(e.kindId);
+        }
+      }
+      expect(seen, contains('study.patron'));
+      expect(seen, contains('career.travel'));
+    });
+
+    test('a 神煞 marker carries no 吉凶 of its own in the structure', () {
+      // 驿马 and 贵人 are stance-0: whether movement or help reads well
+      // depends on the 格局, not on the marker.
+      final chart = samples.values.first;
+      final span = LifeSpan.of(chart);
+      final structure = NatalStructureResolver.resolve(
+          chart, PatternDetector.detect(chart));
+      for (final y in span.years) {
+        final ctx = ChartService.temporalContext(
+          chart,
+          decade: span.decadeAt(y.age.toDouble()),
+          year: y,
+        );
+        for (final a in LuckActivationEngine.evaluate(structure, ctx)) {
+          if (a.targetKind == '神煞') expect(a.stance, 0);
+        }
+      }
     });
   });
 }

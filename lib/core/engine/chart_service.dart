@@ -1,6 +1,7 @@
 import 'package:bazi_core/bazi_core.dart' as bc;
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart';
 
+import '../analysis/activation_engine.dart';
 import '../analysis/temporal_context.dart';
 import '../models/birth_input.dart';
 import '../models/chart_result.dart';
@@ -453,8 +454,37 @@ class ChartService {
       zhiHiddenShiShen: [for (final h in hidden) ss(h)],
       ganWuXing: kWuXingLabels[bc.BaziTable.getWuXingOfGan(gan)] ?? '',
       zhiWuXing: kWuXingLabels[bc.BaziTable.getWuXingOfZhi(zhi)] ?? '',
+      shenSha: _luckShenSha(result, gan, zhi, layer),
       label: label,
     );
+  }
+
+  /// Which of the event-bearing 神煞 this 岁运 pillar is, relative to the
+  /// natal chart — 「今年走驿马」, not 「原局带驿马」.
+  ///
+  /// Restricted to the two the activation engine treats as events; the tables
+  /// are bazi_core's, so this stays one lookup rather than a second copy of
+  /// the 口诀.
+  static List<String> _luckShenSha(
+    ChartResult result,
+    TianGan gan,
+    DiZhi zhi,
+    TemporalLayer layer,
+  ) {
+    final gz = bc.GanZhi(gan, zhi);
+    final type = switch (layer) {
+      TemporalLayer.decade => bc.PillarType.decade,
+      TemporalLayer.year => bc.PillarType.flowYear,
+      TemporalLayer.month => bc.PillarType.flowMonth,
+      TemporalLayer.day => bc.PillarType.flowDay,
+      TemporalLayer.natal => bc.PillarType.day,
+    };
+    return [
+      for (final s in bc.shenShaRegistry)
+        if (LuckActivationEngine.kEventShenSha.contains(s.name) &&
+            s.check(result.chart, gz, type))
+          s.name,
+    ];
   }
 
   static String _fmt2(DateTime d) =>

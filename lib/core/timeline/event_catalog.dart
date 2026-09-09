@@ -183,6 +183,16 @@ class EventCatalog {
       maxAge: _kWorkingMaxAge,
     ),
 
+    // 驿马被冲动 —— 出行、外派、搬迁。留学/移民需「驿马 + 印星」这类
+    // 组合判据，引擎目前只支持单目标规则，故不在此伪造。
+    EventKind(
+      id: 'career.travel',
+      label: '远行出行',
+      domain: EventDomain.career,
+      subtype: '远行出行',
+      maxAge: _kWorkingMaxAge,
+    ),
+
     // ---------------------------------------------------------- 财富
     EventKind(
       id: 'wealth.income',
@@ -351,6 +361,15 @@ class EventCatalog {
       label: '破印得用',
       domain: EventDomain.study,
       subtype: '破印得用',
+      minAge: _kSchoolAge,
+    ),
+
+    // 天乙贵人被引动。
+    EventKind(
+      id: 'study.patron',
+      label: '贵人相助',
+      domain: EventDomain.study,
+      subtype: '贵人相助',
       minAge: _kSchoolAge,
     ),
 
