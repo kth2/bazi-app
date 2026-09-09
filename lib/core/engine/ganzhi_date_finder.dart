@@ -84,11 +84,16 @@ class GanZhiDateFinder {
       final window = _monthWindow(y, monthPillar);
       if (window == null) continue;
 
-      // Days whose ganzhi matches, same julian-day convention as
-      // ChartService.flowDaysOf.
+      // Days whose ganzhi matches. Both boundary days are included: a 节
+      // falls at a clock time, not at midnight, so the day it lands on is
+      // split between two months and a birth earlier that day still belongs
+      // to this one. Excluding it dropped every match on a 节 day — the
+      // reported case, 1976-05-05 06:14 丙辰 壬辰 丁巳 癸卯, sits on the
+      // morning of 立夏. Times that really fall outside the window are
+      // rejected below by charting them, so including the day is safe.
       final startIdx = (window.$1.toJulianDay() + 0.5).floor();
       final endIdx = (window.$2.toJulianDay() + 0.5).floor();
-      for (var i = startIdx; i < endIdx; i++) {
+      for (var i = startIdx; i <= endIdx; i++) {
         final adt = AstroDateTime.fromJulianDay(i.toDouble());
         if (dayGanZhi(adt).toString() != dayPillar) continue;
 
@@ -121,7 +126,10 @@ class GanZhiDateFinder {
                     '${clock.hour.toString().padLeft(2, '0')}:'
                     '${clock.minute.toString().padLeft(2, '0')}',
               ));
-              break; // one representative time per matching day
+              // No break: for 子时 the two halves are different birth moments
+              // on different calendar days (早子时 that morning, 晚子时 the
+              // previous evening) and the user needs both. Every other 时辰
+              // yields a single candidate time, so nothing else is affected.
             }
           } catch (_) {
             // Out-of-range dates for the astronomical engine: skip.
@@ -159,16 +167,24 @@ class GanZhiDateFinder {
     return (boundary, end.dateTime);
   }
 
-  /// Candidate clock times whose *true solar time* lands mid-时辰 on [day].
+  /// Candidate clock times whose *true solar time* lands mid-时辰 on [day],
+  /// where [day] is the day carrying the target **day pillar**.
+  ///
   /// Compensates the longitude offset so far-west/east locations still fall
   /// inside the window (equation of time ±16min < the 60min margin left).
-  /// 子时 straddles midnight, so both 早子 (00:00) and 晚子 (23:30) are tried.
+  ///
+  /// 子时 straddles midnight and needs both halves. 早子时 (00:00) sits on
+  /// [day] itself, but 晚子时 belongs to the *next* day's pillar — so a birth
+  /// carrying [day]'s pillar at 晚子时 happened at 23:30 the evening **before**
+  /// [day], expressed here as −30 minutes. Offering 23:30 on [day] instead,
+  /// as this did, produced a time that always charts as the following day's
+  /// pillar and therefore never matched: every 晚子时 birth was unfindable.
   static Iterable<DateTime> _clockTimesFor(
       DateTime day, String hourPillar, double longitude) {
     final branch = kZhi.indexOf(hourPillar[1]);
     final lonOffsetMin = ((longitude - 120) * 4).round();
     final desired = branch == 0
-        ? [0, 23 * 60 + 30] // 早子时 / 晚子时
+        ? [0, -30] // 早子时 00:00 / 晚子时 23:30 the previous evening
         : [branch * 120]; // window midpoint, e.g. 丑 02:00
     return desired.map(
         (m) => day.add(Duration(minutes: m - lonOffsetMin)));
