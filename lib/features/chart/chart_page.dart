@@ -8,6 +8,7 @@ import '../../theme.dart';
 import '../ai/ai_analysis_page.dart';
 import '../analysis/analysis_page.dart';
 import '../settings/settings_sheet.dart';
+import '../timeline/timeline_page.dart';
 
 /// Chart display: four pillars, 五行力量, interactions,
 /// and the 大运 → 流年 → 流月 → 流日 drill-down.
@@ -91,6 +92,17 @@ class _ChartPageState extends ConsumerState<ChartPage> {
             label: const Text('命理分析'),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const AnalysisPage()),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.timeline),
+            label: const Text('人生时间线（0-120 岁）'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TimelinePage()),
             ),
           ),
           const SizedBox(height: 12),

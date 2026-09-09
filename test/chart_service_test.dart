@@ -44,7 +44,9 @@ void main() {
     test('da yun runs backward for yin-year male, first decade 壬申', () {
       expect(result.daYunForward, false);
       expect(result.decades.first.ganZhi, '壬申');
-      expect(result.decades.length, 8);
+      // Enough steps to reach 虚岁 120 for the life timeline; the exact
+      // count follows from 起运, so assert the coverage rather than a number.
+      expect(result.decades.last.endAge, greaterThanOrEqualTo(120));
       // Consecutive decades are consecutive ganzhi steps backward: 壬申, 辛未...
       expect(result.decades[1].ganZhi, '辛未');
       // Ages are contiguous.
@@ -67,7 +69,9 @@ void main() {
       final jsonStr = jsonEncode(result.toJson());
       final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
       expect(decoded['bazi'], '己丑 癸酉 甲子 己巳');
-      expect((decoded['daYun'] as List).length, 8);
+      final daYun = decoded['daYun'] as List;
+      expect(daYun, isNotEmpty);
+      expect((daYun.last as Map)['endAge'], greaterThanOrEqualTo(120));
       expect(decoded['elementStrength']['verdict'], isNotEmpty);
     });
   });

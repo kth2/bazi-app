@@ -216,6 +216,11 @@ class TemporalPillar {
   final List<String> zhiHiddenShiShen;
 
   /// 五行 of the 天干 and of the branch's 本气.
+  /// 神煞 this 岁运 pillar carries relative to the natal chart — 岁运带驿马,
+  /// 岁运带天乙贵人. Resolved by ChartService, which owns the bazi_core
+  /// tables; empty for the natal pillars themselves.
+  final List<String> shenSha;
+
   final String ganWuXing;
   final String zhiWuXing;
 
@@ -228,6 +233,7 @@ class TemporalPillar {
     required this.zhiMainShiShen,
     required this.label,
     this.zhiHiddenShiShen = const [],
+    this.shenSha = const [],
     this.ganWuXing = '',
     this.zhiWuXing = '',
   });

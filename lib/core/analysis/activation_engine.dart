@@ -172,6 +172,32 @@ class LuckActivationEngine {
       addFromShiShen(p.ganShiShen, true);
       addFromShiShen(p.zhiMainShiShen, false);
 
+      // --- D. 神煞: the 岁运 pillar arriving as a 驿马 or 天乙贵人 ---
+      //
+      // 「岁运带驿马」 is the classical reading — this year's branch is the
+      // 驿马 of the natal 年支/日支 — not 「原局带驿马」, which is either true
+      // for a whole life or never and so names no year. ChartService resolves
+      // it, because the 神煞 tables live in bazi_core.
+      //
+      // Only these two: every other 神煞 bazi_core computes colours the chart
+      // rather than saying something happened.
+      for (final marker in p.shenSha) {
+        if (!kEventShenSha.contains(marker)) continue;
+        out.add(Activation(
+          layer: p.layer,
+          target: marker,
+          targetKind: '神煞',
+          effect: ActivationEffect.strengthen,
+          // Below a 十神 临位: a 神煞 qualifies an event, it does not by
+          // itself establish one.
+          intensity: p.layer.authority * 0.7,
+          // 驿马 and 贵人 carry no 喜忌 of their own; whether movement or help
+          // reads well depends on the 格局, not on the marker.
+          stance: 0,
+          mechanism: '${p.layer.label}${p.ganZhi}为原局之$marker',
+        ));
+      }
+
       // --- C. 调候: does this pillar bring what the climate needs? ---
       for (final entry in {p.ganWuXing: '天干', p.zhiWuXing: '地支'}.entries) {
         if (entry.key.isEmpty) continue;
@@ -272,6 +298,11 @@ class LuckActivationEngine {
   /// a modelling artefact rather than insight. Re-measure with
   /// test/engine_calibration_test.dart if the weights or rules change.
   static const int _maxInteractionsPerLayer = 5;
+
+  /// 神煞 that name an event when they arrive. Everything else bazi_core
+  /// computes describes a flavour of the chart, not something that happens.
+  static const Set<String> kEventShenSha = {'驿马', '天乙贵人'};
+
 
   static List<Activation> _capInteractionsPerLayer(List<Activation> sorted) {
     final kept = <Activation>[];

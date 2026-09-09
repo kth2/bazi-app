@@ -1,6 +1,7 @@
 import 'package:bazi_core/bazi_core.dart' as bc;
 import 'package:sxwnl_spa_dart/sxwnl_spa_dart.dart';
 
+import '../analysis/activation_engine.dart';
 import '../analysis/temporal_context.dart';
 import '../models/birth_input.dart';
 import '../models/chart_result.dart';
@@ -11,7 +12,10 @@ import 'labels.dart';
 /// plus on-demand 流月/流日 timeline expansion.
 class ChartService {
   static const double _timezone = 8.0;
-  static const int _decadeCount = 8;
+  /// 12 steps of 大运, enough to reach 虚岁 120 (两甲子) on any chart: the
+  /// earliest possible 起运 is age 1, which puts the twelfth decade at
+  /// 111-120. The life timeline needs the full span; eight stopped at ~90.
+  static const int _decadeCount = 12;
 
   static const List<String> _lunarMonthNames = [
     '正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊',
@@ -450,8 +454,37 @@ class ChartService {
       zhiHiddenShiShen: [for (final h in hidden) ss(h)],
       ganWuXing: kWuXingLabels[bc.BaziTable.getWuXingOfGan(gan)] ?? '',
       zhiWuXing: kWuXingLabels[bc.BaziTable.getWuXingOfZhi(zhi)] ?? '',
+      shenSha: _luckShenSha(result, gan, zhi, layer),
       label: label,
     );
+  }
+
+  /// Which of the event-bearing 神煞 this 岁运 pillar is, relative to the
+  /// natal chart — 「今年走驿马」, not 「原局带驿马」.
+  ///
+  /// Restricted to the two the activation engine treats as events; the tables
+  /// are bazi_core's, so this stays one lookup rather than a second copy of
+  /// the 口诀.
+  static List<String> _luckShenSha(
+    ChartResult result,
+    TianGan gan,
+    DiZhi zhi,
+    TemporalLayer layer,
+  ) {
+    final gz = bc.GanZhi(gan, zhi);
+    final type = switch (layer) {
+      TemporalLayer.decade => bc.PillarType.decade,
+      TemporalLayer.year => bc.PillarType.flowYear,
+      TemporalLayer.month => bc.PillarType.flowMonth,
+      TemporalLayer.day => bc.PillarType.flowDay,
+      TemporalLayer.natal => bc.PillarType.day,
+    };
+    return [
+      for (final s in bc.shenShaRegistry)
+        if (LuckActivationEngine.kEventShenSha.contains(s.name) &&
+            s.check(result.chart, gz, type))
+          s.name,
+    ];
   }
 
   static String _fmt2(DateTime d) =>

@@ -28,7 +28,7 @@ class EventDomain {
   static const Map<String, List<String>> subtypes = {
     career: [
       '职位晋升', '权责加重', '职务变动', '离职转换', '创业自立', '职场是非',
-      '迁移变动', '压力解除', '摆脱束缚', '收束心性',
+      '迁移变动', '压力解除', '摆脱束缚', '收束心性', '远行出行',
     ],
     wealth: [
       '收入增益', '投资置产', '意外之财', '破财损耗', '因财劳碌', '资产变动',
@@ -39,6 +39,7 @@ class EventDomain {
     ],
     study: [
       '文书学业', '考试资格', '技艺才华', '进修拓展', '学途受阻', '破印得用',
+      '贵人相助',
     ],
     health: ['劳神耗气', '旧患复发', '外伤意外', '情志郁结', '身心失调'],
   };
@@ -170,6 +171,32 @@ class EventInferenceEngine {
       target: '官杀', effect: ActivationEffect.release,
       domain: EventDomain.marriage, subtype: '感情生变',
       polarity: EventPolarity.mixed, gender: Gender.female,
+    ),
+
+    // ---------------- 神煞 ----------------
+    // 驿马 and 天乙贵人 are the only two 神煞 fed in as event targets (see
+    // LuckActivationEngine._eventShenSha). They carry no 喜忌 of their own,
+    // so these rules are stance-agnostic and the polarity is 参半 or 吉 by
+    // the nature of the 神煞 itself, never by the structure.
+    _EventRule(
+      target: '驿马', effect: ActivationEffect.release,
+      domain: EventDomain.career, subtype: '远行出行',
+      polarity: EventPolarity.mixed,
+    ),
+    _EventRule(
+      target: '驿马', effect: ActivationEffect.strengthen,
+      domain: EventDomain.career, subtype: '远行出行',
+      polarity: EventPolarity.mixed,
+    ),
+    _EventRule(
+      target: '天乙贵人', effect: ActivationEffect.strengthen,
+      domain: EventDomain.study, subtype: '贵人相助',
+      polarity: EventPolarity.favourable,
+    ),
+    _EventRule(
+      target: '天乙贵人', effect: ActivationEffect.bind,
+      domain: EventDomain.study, subtype: '贵人相助',
+      polarity: EventPolarity.favourable,
     ),
 
     // ---------------- 财星 ----------------
@@ -396,9 +423,16 @@ class EventInferenceEngine {
 
         // Structural support: an event resting on a 十神 that is not even
         // operative in the natal chart is weaker than one that is.
-        final support = a.targetKind == '十神'
-            ? (structure.presence[a.target]?.isOperative ?? false ? 1.0 : 0.6)
-            : 0.85;
+        final support = switch (a.targetKind) {
+          '十神' =>
+            (structure.presence[a.target]?.isOperative ?? false) ? 1.0 : 0.6,
+          // Like a 宫位: neither a 神煞 nor a palace has 通根 to test, so
+          // neither can be scored on structural presence. The ordering that
+          // does matter — 天干临位 > 地支本气 > 神煞 — is already carried by
+          // the activation's intensity.
+          '神煞' => 0.85,
+          _ => 0.85,
+        };
         final confidence = (a.intensity * support).clamp(0.0, 1.0);
         if (confidence < _minConfidence) continue;
 
@@ -407,7 +441,9 @@ class EventInferenceEngine {
           '原局：${structure.pattern.geJu}·${structure.status.label}'
               '（用神${structure.xiangShen.isEmpty ? structure.pattern.geJu : structure.xiangShen.join('、')}）',
           if (a.targetKind == '十神')
-            '${a.target}在原局${structure.presence[a.target]?.level ?? '未详'}',
+            '${a.target}在原局${structure.presence[a.target]?.level ?? '未详'}'
+          else if (a.targetKind == '神煞')
+            '原局带${a.target}',
           '${a.layer.label}：${a.mechanism}',
           '断为${r.domain}·${r.subtype}（${r.polarity.label}）',
         ];
