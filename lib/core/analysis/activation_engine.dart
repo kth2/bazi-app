@@ -71,6 +71,15 @@ class Activation {
   /// Plain-language 干支 reason.
   final String mechanism;
 
+  /// Which 干支 relationship produced this, when one did.
+  ///
+  /// [effect] deliberately collapses 刑 and 相绝 into `damage` — for most
+  /// judgements how a thing was harmed matters less than that it was. But a
+  /// few readings are specifically about 刑: 官杀逢刑 is 官非, not simply
+  /// pressure. Rules that need that distinction ask for it here; everything
+  /// else keeps working off [effect].
+  final InteractionKind? via;
+
   const Activation({
     required this.layer,
     required this.target,
@@ -79,6 +88,7 @@ class Activation {
     required this.intensity,
     required this.stance,
     required this.mechanism,
+    this.via,
   });
 
   bool get favourable => stance > 0;
@@ -92,6 +102,7 @@ class Activation {
         'effect': effect.label,
         'intensity': double.parse(intensity.toStringAsFixed(2)),
         'stance': stance,
+        if (via != null) 'via': via!.name,
         'mechanism': mechanism,
       };
 
@@ -237,6 +248,7 @@ class LuckActivationEngine {
             effect: effect,
             intensity: intensity,
             stance: effect.polarity * stance,
+            via: i.kind,
             mechanism: '${i.description}'
                 '——${party.position}之$group被${effect.label}',
           ));
@@ -256,6 +268,7 @@ class LuckActivationEngine {
             // A palace has no 喜忌 of its own: 冲合 both stir it, and whether
             // that reads well depends on the event, not on the structure.
             stance: 0,
+            via: i.kind,
             mechanism: '${i.type}：${party.position}'
                 '（${kPalaceMeaning[party.position]}）被${effect.label}',
           ));
@@ -268,7 +281,16 @@ class LuckActivationEngine {
     // (layer, target, effect) so repetition cannot inflate a window's score.
     final best = <String, Activation>{};
     for (final a in out) {
-      final key = '${a.layer.index}|${a.targetKind}|${a.target}|${a.effect.index}';
+      // 刑 is kept apart from the other `damage` sources, because 官非 turns
+      // on it specifically and merging would silently drop it. Everything
+      // else still collapses — the narrowest split that buys what the rule
+      // needs. Measured on the 240-chart grid: this and a full
+      // InteractionKind key land in the same place (吉:凶 1.14 vs 1.13,
+      // against 1.27 before this change), so the narrower one wins on
+      // changing less.
+      final punished = a.via == InteractionKind.punishment;
+      final key = '${a.layer.index}|${a.targetKind}|${a.target}'
+          '|${a.effect.index}|$punished';
       final prior = best[key];
       if (prior == null || a.intensity > prior.intensity) best[key] = a;
     }

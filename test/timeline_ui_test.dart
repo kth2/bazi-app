@@ -120,7 +120,7 @@ void main() {
       expect(find.textContaining('60岁'), findsWidgets);
     });
 
-    testWidgets('sensitive categories are hidden and said to be hidden', (
+    testWidgets('sensitive markers are drawn, with the caveat beside them', (
       tester,
     ) async {
       await tester.pumpWidget(wrap());
@@ -128,10 +128,40 @@ void main() {
 
       final painter =
           tester.widget<CustomPaint>(_axisFinder).painter as TimelinePainter;
-      for (final e in painter.events) {
-        expect(e.kind!.isGuarded, isFalse);
-      }
-      expect(find.textContaining('默认不显示'), findsOneWidget);
+      expect(
+        painter.events.any((e) => e.kind!.isSensitive),
+        isTrue,
+        reason: 'the sample chart produces sensitive markers; they must be on '
+            'the axis without the reader having to ask for them',
+      );
+      // Shown by default means the caveat is shown by default too — it can no
+      // longer live behind the switch that used to gate the markers.
+      expect(find.textContaining('不构成医疗、法律或财务建议'), findsOneWidget);
+      expect(find.textContaining('信或不信由你判断'), findsOneWidget);
+    });
+
+    testWidgets('tapping a sensitive marker shows its own disclaimer', (
+      tester,
+    ) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      final painter =
+          tester.widget<CustomPaint>(_axisFinder).painter as TimelinePainter;
+      final target = painter.events.firstWhere((e) => e.kind!.isSensitive);
+      final box = tester.getRect(_axisFinder);
+      final (left, right) = TimelinePainter.boundsFor(painter.geometry, target);
+      await tester.tapAt(
+        Offset(
+          box.left + (left + right) / 2,
+          box.top +
+              painter.rows.laneTop(painter.lanes[target.id]) +
+              TimelineRows.laneHeight / 2,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining(target.kind!.disclaimer!), findsWidgets);
     });
 
     testWidgets('an empty scan still renders the axis', (tester) async {
@@ -365,7 +395,7 @@ void _editingTests() {
   });
 
   group('sensitive categories', () {
-    testWidgets('the settings sheet lists them with the disclaimer', (
+    testWidgets('the settings sheet offers to switch them off, not on', (
       tester,
     ) async {
       await tester.pumpWidget(wrap());
@@ -375,16 +405,22 @@ void _editingTests() {
       await tester.pumpAndSettle();
 
       expect(find.text('敏感类别'), findsOneWidget);
-      for (final k in EventCatalog.guarded) {
+      for (final k in EventCatalog.sensitive) {
         expect(find.textContaining(k.label), findsWidgets);
       }
+      // Every switch starts on: the four categories ship visible.
+      for (final sw in tester.widgetList<Switch>(find.byType(Switch))) {
+        expect(sw.value, isTrue);
+      }
       expect(find.textContaining('不构成医疗、法律或财务建议'), findsWidgets);
-      expect(find.textContaining('不预测寿元'), findsOneWidget);
+      expect(find.textContaining('不是生命终点'), findsWidgets);
     });
 
-    testWidgets('switching one on requires acknowledging the disclaimer', (
+    testWidgets('switching one off hides it with no confirmation dialog', (
       tester,
     ) async {
+      // Turning a reading *off* is nobody's business but the reader's; the
+      // acknowledgement gate belonged to the old opt-in flow and is gone.
       await tester.pumpWidget(wrap());
       await tester.pumpAndSettle();
 
@@ -393,11 +429,7 @@ void _editingTests() {
       await tester.tap(find.byType(Switch).first);
       await tester.pumpAndSettle();
 
-      expect(find.text('开启敏感类别'), findsOneWidget);
-      await tester.tap(find.text('取消'));
-      await tester.pumpAndSettle();
-
-      // Cancelling must leave it off.
+      expect(find.byType(AlertDialog), findsNothing);
       expect(tester.widget<Switch>(find.byType(Switch).first).value, isFalse);
     });
   });

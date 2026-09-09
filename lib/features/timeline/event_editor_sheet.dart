@@ -178,7 +178,7 @@ class _EventEditorState extends State<_EventEditor> {
                     value: k.id,
                     child: Text(
                       '${k.domain} · ${k.label}'
-                      '${k.isGuarded ? '（敏感）' : ''}',
+                      '${k.isSensitive ? '（敏感）' : ''}',
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),

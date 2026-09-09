@@ -5,11 +5,11 @@ import '../../core/timeline/event_catalog.dart';
 import '../../providers/timeline_provider.dart';
 import '../../theme.dart';
 
-/// Switches for the categories that are off by default.
+/// Switches for the categories that make the heaviest claims.
 ///
-/// The four named as sensitive — 离婚、大病/手术、寿元、官司 — stay off until
-/// someone asks for them, and asking requires reading the disclaimer once.
-/// 破财风险 is deliberately *not* in this list.
+/// All four — 离婚、手术、寿元、官非 — are **shown by default**. The sheet
+/// exists so a person can switch off a reading they would rather not carry
+/// around, not so they have to ask permission to see one.
 Future<void> showTimelineSettingsSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -25,7 +25,6 @@ class _TimelineSettingsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(timelineSettingsProvider);
     final notifier = ref.read(timelineSettingsProvider.notifier);
-    final guarded = EventCatalog.guarded;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -40,81 +39,54 @@ class _TimelineSettingsSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '以下类别默认不显示。开启后会在时间线上多出对应标记，'
-              '不会挤掉原有的标记。',
+              '这几类默认**显示**，信或不信由你判断。'
+              '若不想在时间线上看到某一类，在这里关掉即可。',
               style: TextStyle(
                 fontSize: 12,
                 color: kInkBlack.withValues(alpha: 0.65),
               ),
             ),
             const SizedBox(height: 8),
-            for (final k in guarded)
+            for (final k in EventCatalog.sensitive)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text('${k.domain} · ${k.label}'),
+                subtitle: k.id == 'health.longevity'
+                    ? Text(
+                        '标的是需留意健康的年份区间，不是生命终点',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: kInkBlack.withValues(alpha: 0.6),
+                        ),
+                      )
+                    : null,
                 value: settings.isOn(k.id),
-                onChanged: (on) async {
-                  if (on && !settings.acknowledgedDisclaimer) {
-                    final ok = await _confirm(context);
-                    if (!ok) return;
-                    await notifier.acknowledge();
-                  }
-                  await notifier.toggle(k.id, on);
-                },
+                onChanged: (on) => notifier.toggle(k.id, on),
               ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: kInkBlack.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                EventCatalog.kGuardedDisclaimer,
-                style: TextStyle(
-                  fontSize: 12,
-                  height: 1.5,
-                  color: kInkBlack.withValues(alpha: 0.75),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '本应用不预测寿元，也不会把任何一年标为生命终点；'
-              '健康类标记只是提示需要留意的年份。',
-              style: TextStyle(
-                fontSize: 11,
-                color: kInkBlack.withValues(alpha: 0.55),
-              ),
-            ),
+            _note(EventCatalog.kGuardedDisclaimer),
+            const SizedBox(height: 8),
+            _note(EventCatalog.kLongevityDisclaimer),
           ],
         ),
       ),
     );
   }
 
-  Future<bool> _confirm(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('开启敏感类别'),
-        content: Text(
-          '${EventCatalog.kGuardedDisclaimer}\n\n'
-          '这些标记是规则推演的可能性，不是既定事实。确定开启吗？',
-          style: const TextStyle(height: 1.5),
+  Widget _note(String text) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: kInkBlack.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(8),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            height: 1.5,
+            color: kInkBlack.withValues(alpha: 0.75),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('我已阅读，开启'),
-          ),
-        ],
-      ),
-    );
-    return ok ?? false;
-  }
+        ),
+      );
 }
