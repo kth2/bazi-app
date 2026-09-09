@@ -14,11 +14,18 @@ import 'package:flutter_test/flutter_test.dart';
 /// someone deliberately deleting this test.
 void main() {
   /// Layers that decide what the chart *means*. None may read user outcomes.
+  ///
+  /// `core/timeline` is in the list because the life timeline is where
+  /// recorded outcomes and predicted events sit side by side on one axis —
+  /// the most tempting place in the app to let what happened adjust what the
+  /// rules say will happen. It may read the chart; it may not read the
+  /// journal.
   const engineDirs = [
     'lib/core/analysis',
     'lib/core/rules',
     'lib/core/engine',
     'lib/core/models',
+    'lib/core/timeline',
   ];
 
   List<File> dartFilesIn(String dir) => Directory(dir)

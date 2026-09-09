@@ -162,7 +162,7 @@ class EventKind {
 | 创业 | 事业·创业自立 | 已有 |
 | 换工作/跳槽 | 事业·职务变动 / 离职转换 | 已有 |
 | 财运高峰 | 财富·收入增益 | 已有，天然是**区间** |
-| 破财风险 | 财富·破财损耗 | 已有 |
+| 破财风险 | 财富·破财损耗 | 已有；`normal`，**不**默认关闭 |
 | 贵人相助 | — | **新增**：天乙贵人/太极贵人 神煞 + 印星被引动 |
 | 远行/出差/移民 | 事业·迁移变动 | 部分有；移民需 驿马 + 冲提纲 |
 | 健康需注意 | 健康·各子类 | 已有 |
@@ -177,7 +177,8 @@ class EventKind {
 
 ## 5. 敏感事件的处理边界
 
-按需求：离婚、大病/手术、寿元、官司默认关闭，需主动开启。除此之外：
+按需求：离婚、大病/手术、寿元、官司默认关闭，需主动开启。**这四类就是全部**
+——「破财风险」是 `normal`，照常显示，不进 guarded 名单（已确认）。除此之外：
 
 **寿元一项不做「预测死亡年份」。** 引擎不会输出某一年为终点，也不会给出
 「寿元 X 岁」。开启后只会把「日主受克极重、且多重刑冲叠加」的**年龄区间**
@@ -203,25 +204,36 @@ class EventKind {
 `InteractiveViewer` 做的是二维矩阵变换，和 `Draggable` 抢手势，且拖放时
 要把全局坐标反变换回内容坐标才能命中测试，容易出错。
 
-改用：**横向 `SingleChildScrollView`（平移）+ 一个 `pxPerYear` 状态（缩放）**。
+改用：**一个自管的 `(pxPerYear, offset)` 状态**，平移和缩放都走同一个
+`GestureDetector`。
+
+> **P2 更正**：本节原先写的是「横向 `SingleChildScrollView` 负责平移，
+> 滚动惯性免费获得」。这是错的，实现时已改。`Scrollable` 会把横向拖拽
+> **连同双指拖拽一起**认领掉，捏合手势因此永远到不了 scale recognizer，
+> 双指缩放直接失效。平移和缩放必须由同一个识别器处理。
 
 ```dart
-// 缩放只改一个标量，布局宽度随之变化，滚动由 ScrollView 天然处理。
+// 缩放只改一个标量；平移只改另一个。两者都不经过 Scrollable。
 double pxPerYear;           // 缩放级别
+double offset;              // 已滚过 0 岁的像素数
 double get contentWidth => pxPerYear * maxAge;
-double xForAge(double age) => age * pxPerYear - scrollOffset;
-double ageForX(double x)   => (x + scrollOffset) / pxPerYear;
+double xForAge(double age) => age * pxPerYear - offset;
+double ageForX(double x)   => (x + offset) / pxPerYear;
 ```
 
-好处：命中测试只是一维除法；滚动惯性、滚动条、键盘都免费获得。
+好处：命中测试只是一维除法；手势没有归属之争。代价是惯性、滚动条、键盘
+滚动都要自己来（P2 只做了鼠标滚轮 + 缩放按钮，惯性暂缺）。
 
-双指缩放用 `GestureDetector(onScaleUpdate:)` 只取 `details.horizontalScale`，
-更新 `pxPerYear` 并同步修正 `scrollOffset` 使**捏合中心的年龄保持不动**：
+平移与缩放合并成一句话：**手指按下时那一岁，始终留在手指下面**。
+`onScaleStart` 记下这一岁，`onScaleUpdate` 用它反解 offset — 单指拖动
+是 `scale == 1` 的退化情形，不需要单独一条代码路径：
 
 ```dart
-final anchorAge = ageForX(focalX);
-pxPerYear = (pxPerYear * scale).clamp(minPx, maxPx);
-scrollOffset = anchorAge * pxPerYear - focalX;
+// 手势开始
+anchorAge = ageForX(details.localFocalPoint.dx);
+// 手势更新（相对手势起点的几何，不是上一帧，否则缩放会累乘）
+pxPerYear = (startPxPerYear * details.scale).clamp(minPx, maxPx);
+offset    = anchorAge * pxPerYear - details.localFocalPoint.dx;
 ```
 
 ### 6.2 三档 LOD（缩放决定画什么）
@@ -266,7 +278,7 @@ scrollOffset = anchorAge * pxPerYear - focalX;
 用户把「升职」拖到某一年，不能因此改变规则权重或格局判定，否则理论就被
 使用者的记忆悄悄改写了。`test/case_guardrail_test.dart` 已经在守
 `core/analysis`、`core/rules`、`core/engine`、`core/models` 不得 import
-案例库；`core/timeline` 应加入同一张禁止清单。
+案例库；`core/timeline` 已于 P2 加入同一张禁止清单。
 
 （时间线事件要不要作为**上下文**写进 AI 提示词，是另一个问题，需单独决定——
 见第 9 节待确认事项。）
@@ -292,6 +304,7 @@ scrollOffset = anchorAge * pxPerYear - focalX;
 | 生子判据 | **男以官杀为子，女以食伤为子** |
 | 重算策略 | 用户拖动过的推荐事件保留（`EventOrigin.userMoved`） |
 | 时间线事件进 AI 提示词 | 暂不进，待时间线稳定后单独决定 |
+| 「破财风险」敏感级别 | **`normal`，不默认关闭**。默认关闭的只有点名的四类：离婚、大病/手术、寿元、官司 |
 
 ## 10. P1 实施记录（已完成）
 
@@ -310,9 +323,38 @@ scrollOffset = anchorAge * pxPerYear - focalX;
 排盘页的大运列表与 AI 提示词的「大运列表」都会从 8 步变为 12 步。
 这是必要的：时间线要画满两甲子，就不能只算到 90 岁。
 
-## 11. 仍待确认
+## 11. P2 实施记录（已完成）
 
+只读时间线。三个文件，职责不重叠：
 
+| 文件 | 职责 |
+|---|---|
+| `features/timeline/timeline_geometry.dart` | 纯像素↔虚岁映射：`pxPerYear`/`offset`、平移、缩放、LOD、标签间隔。不含任何 Flutter 类型，可直接单测 |
+| `features/timeline/timeline_painter.dart` | `CustomPainter`：小运带 + 大运色块 + 流年刻度 + 年龄轴 + 今天标线。另含 `TimelineRows`（纵向布局常量），P4 的命中测试要读同一份 |
+| `features/timeline/timeline_page.dart` | 手势、选中态、详情面板、图例 |
 
-1. **敏感类别**：除点名的四类（离婚/手术/寿元/官司），
-   「破财风险」要不要也默认关闭？（未定，P5 前给答复即可）
+要点与实测：
+
+- **色块着色**：按大运天干的五行取色（`kElementColors`），阳干 alpha 0.30、
+  阴干 0.16。相邻两步常是同五行（甲运接乙运），只靠颜色分不开，用深浅分。
+- **刻度间隔与标签间隔是两件事**。刻度一像素就够，标签要 44 像素。
+  `tickEvery` 按 LOD 给（10/5/1），`axisLabelEvery` 另按 `pxPerYear`
+  从 [1,2,5,10,20] 里挑第一个够宽的。手机全览（≈3.25 px/年）落在 20 年一标。
+- **今天标线**用「公历年 + 年内已过比例」定位，不是立春分界，故年初年尾可能
+  差几周。仅作视觉锚点，不参与任何推演——已在代码注释里写明。
+- **`LayoutBuilder` 必须放在 `Card` 里面**。放外面时 geometry 的
+  `viewportWidth` 比画布实际宽度多出一个 card margin，画出来的位置和点下去的
+  位置差好几岁。这个 bug 是 `timeline_ui_test.dart` 用「按 `xForAge(60.5)`
+  反算坐标去点」的写法抓到的——测试里若写死像素就抓不到。
+- **惯性暂缺**：自管 offset 的代价（见 6.1 的更正）。桌面/网页补了滚轮平移与
+  Ctrl+滚轮缩放，另有放大/缩小/全览三个按钮兜底可访问性。
+
+测试：`timeline_geometry_test.dart` 17 个（映射互逆、平移夹紧、缩放定点、
+LOD 不跳级、标签不重叠），`timeline_ui_test.dart` 6 个（默认全览、点击选中、
+小运期标注、缩放按钮、无命盘不崩）。
+
+## 12. 仍待确认
+
+1. **时间线事件是否作为上下文进入 AI 提示词**（见第 7 节）。倾向暂不进：
+   用户手动摆放的事件一旦进了提示词，就成了一条绕过守则的反馈回路——
+   模型会照着用户已经相信的事情解释命盘。等 P4 的持久化跑稳后单独决定。
