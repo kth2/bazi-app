@@ -8,7 +8,9 @@ import 'package:bazi_app/core/models/chart_result.dart';
 import 'package:bazi_app/core/timeline/life_span.dart';
 import 'package:bazi_app/features/timeline/timeline_geometry.dart';
 import 'package:bazi_app/features/timeline/timeline_page.dart';
+import 'package:bazi_app/features/timeline/event_lanes.dart';
 import 'package:bazi_app/features/timeline/timeline_painter.dart';
+import 'package:bazi_app/providers/timeline_provider.dart';
 import 'package:bazi_app/providers/birth_input_provider.dart';
 import 'package:bazi_app/providers/chart_provider.dart';
 
@@ -41,6 +43,103 @@ final _axisFinder = find.byWidgetPredicate(
 );
 
 void main() {
+  group('event markers', () {
+    testWidgets('the axis carries suggested markers', (tester) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      final painter = tester
+          .widget<CustomPaint>(_axisFinder)
+          .painter as TimelinePainter;
+      expect(painter.events, isNotEmpty);
+      expect(painter.rows.laneCount, greaterThan(0));
+      // Every marker must have a lane, or it is drawn where nothing can be
+      // tapped.
+      for (final e in painter.events) {
+        expect(painter.lanes.laneOf, contains(e.id));
+      }
+    });
+
+    testWidgets('tapping a marker shows its reasoning chain', (tester) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      final box = tester.getRect(_axisFinder);
+      final painter = tester
+          .widget<CustomPaint>(_axisFinder)
+          .painter as TimelinePainter;
+      final target = painter.events.first;
+      final (left, right) = TimelinePainter.boundsFor(painter.geometry, target);
+      final lane = painter.lanes[target.id];
+      await tester.tapAt(Offset(
+        box.left + (left + right) / 2,
+        box.top +
+            painter.rows.laneTop(lane) +
+            TimelineRows.laneHeight / 2,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining(target.label), findsWidgets);
+      expect(find.text('推理链'), findsOneWidget);
+      expect(find.textContaining('把握度'), findsOneWidget);
+      // The card must not present a rule inference as an established fact.
+      expect(find.textContaining('非既定事实'), findsOneWidget);
+    });
+
+    testWidgets('tapping empty axis space falls back to the year panel',
+        (tester) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      final box = tester.getRect(_axisFinder);
+      final painter = tester
+          .widget<CustomPaint>(_axisFinder)
+          .painter as TimelinePainter;
+      // The 大运 band row holds no markers.
+      await tester.tapAt(Offset(
+        box.left + painter.geometry.xForAge(60.5),
+        box.top + TimelineRows.decadeTop + 10,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('推理链'), findsNothing);
+      expect(find.textContaining('60岁'), findsWidgets);
+    });
+
+    testWidgets('sensitive categories are hidden and said to be hidden',
+        (tester) async {
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      final painter = tester
+          .widget<CustomPaint>(_axisFinder)
+          .painter as TimelinePainter;
+      for (final e in painter.events) {
+        expect(e.kind!.isGuarded, isFalse);
+      }
+      expect(find.textContaining('默认不显示'), findsOneWidget);
+    });
+
+    testWidgets('an empty scan still renders the axis', (tester) async {
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          birthInputProvider.overrideWith((ref) => _input),
+          chartResultProvider.overrideWithValue(_chart),
+          suggestedEventsProvider.overrideWithValue(const []),
+        ],
+        child: const MaterialApp(home: TimelinePage()),
+      ));
+      await tester.pumpAndSettle();
+
+      final painter = tester
+          .widget<CustomPaint>(_axisFinder)
+          .painter as TimelinePainter;
+      expect(painter.rows.laneCount, 0);
+      expect(painter.lanes.laneCount, EventLanes.empty.laneCount);
+      expect(find.textContaining('0-120岁'), findsOneWidget);
+    });
+  });
+
   testWidgets('renders the whole span and says so', (tester) async {
     await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();

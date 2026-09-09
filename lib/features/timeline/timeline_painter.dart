@@ -1,31 +1,63 @@
 import 'package:bazi_core/bazi_core.dart' as bc;
 import 'package:flutter/material.dart';
 
+import '../../core/analysis/event_inference.dart';
 import '../../core/engine/labels.dart';
 import '../../core/timeline/life_span.dart';
+import '../../core/timeline/timeline_event.dart';
+import 'event_lanes.dart';
 import '../../theme.dart';
 import 'timeline_geometry.dart';
 
 /// Vertical layout of the timeline.
 ///
-/// The painter and (from P4) the marker hit testing both read these, so a
-/// marker can never be drawn one row away from where it can be grabbed.
+/// The painter, the page's SizedBox and (from P4) the marker hit testing all
+/// read these, so a marker can never be drawn one row away from where it can
+/// be grabbed. Only the lane block varies, and it varies with the number of
+/// event lanes rather than with zoom — see [EventLanes].
 class TimelineRows {
-  const TimelineRows._();
+  final int laneCount;
+
+  const TimelineRows({this.laneCount = 0});
 
   static const double decadeTop = 12;
   static const double decadeHeight = 46;
   static const double decadeBottom = decadeTop + decadeHeight;
 
-  static const double yearTop = decadeBottom + 8;
+  static const double laneHeight = 17;
+  static const double markerHeight = 12;
   static const double yearHeight = 26;
-  static const double yearBottom = yearTop + yearHeight;
-
-  static const double axisTop = yearBottom + 2;
   static const double axisHeight = 26;
 
-  static const double height = axisTop + axisHeight;
+  double get lanesTop => decadeBottom + 6;
+  double get lanesHeight => laneCount * laneHeight;
+
+  double laneTop(int lane) => lanesTop + lane * laneHeight;
+
+  double get yearTop => lanesTop + lanesHeight + (laneCount > 0 ? 4 : 2);
+  double get yearBottom => yearTop + yearHeight;
+
+  double get axisTop => yearBottom + 2;
+  double get height => axisTop + axisHeight;
 }
+
+/// Marker colours, one per 事件域.
+///
+/// Deliberately muted and distinct in hue from [kElementColors]: the 大运
+/// bands behind them are the five elements, and a marker that looked like a
+/// pale 火 band would read as part of the band rather than as an event.
+///
+/// Polarity is *not* colour-coded. 吉凶 shown as green-vs-red across forty
+/// markers turns a reference tool into a mood, and this app has already had
+/// to correct for pessimistic framing once; the polarity is stated in words
+/// on the marker's detail panel instead.
+const Map<String, Color> kDomainColors = {
+  EventDomain.career: Color(0xFF3F5169),
+  EventDomain.wealth: Color(0xFF8A6B2F),
+  EventDomain.marriage: Color(0xFF8C4A63),
+  EventDomain.study: Color(0xFF3F6B63),
+  EventDomain.health: Color(0xFF6B5B8A),
+};
 
 /// Draws the 0-120 axis: 小运期 + 大运 colour bands, 流年 ticks, age labels
 /// and a "today" marker.
@@ -35,6 +67,12 @@ class TimelineRows {
 class TimelinePainter extends CustomPainter {
   final LifeSpan span;
   final TimelineGeometry geometry;
+  final TimelineRows rows;
+
+  /// Suggested and user-placed markers, already filtered by the enabled
+  /// categories.
+  final List<LifeEvent> events;
+  final EventLanes lanes;
 
   /// 虚岁 of today, or null when the chart is not for a living-through age
   /// on this axis (未出生 or past 120).
@@ -43,19 +81,106 @@ class TimelinePainter extends CustomPainter {
   /// Highlighted 大运 index, if the user has tapped one.
   final int? selectedDecadeIndex;
 
+  /// Id of the tapped marker.
+  final String? selectedEventId;
+
   const TimelinePainter({
     required this.span,
     required this.geometry,
+    required this.rows,
+    this.events = const [],
+    this.lanes = EventLanes.empty,
     this.todayAge,
     this.selectedDecadeIndex,
+    this.selectedEventId,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     _paintDecades(canvas, size);
+    _paintEvents(canvas, size);
     _paintYearTicks(canvas, size);
     _paintAxis(canvas, size);
     _paintToday(canvas, size);
+  }
+
+  // -------------------------------------------------------------- 事件标记
+
+  /// Pixel span a marker occupies, including the minimum width a point event
+  /// needs to stay tappable. Shared with the page's hit testing, so what is
+  /// drawn and what can be tapped are the same rectangle.
+  static (double, double) boundsFor(TimelineGeometry g, LifeEvent e) {
+    final left = g.xForAge(e.anchor.startAge);
+    final right = g.xForAge(
+      e.anchor.isSpan ? e.anchor.endAge + 1 : e.anchor.startAge + 1,
+    );
+    const minWidth = 14.0;
+    if (right - left >= minWidth) return (left, right);
+    final centre = (left + right) / 2;
+    return (centre - minWidth / 2, centre + minWidth / 2);
+  }
+
+  (double, double) markerBounds(LifeEvent e) => boundsFor(geometry, e);
+
+  void _paintEvents(Canvas canvas, Size size) {
+    if (events.isEmpty) return;
+    final labelled = geometry.lod != TimelineLod.decade;
+
+    for (final e in events) {
+      final (left, right) = markerBounds(e);
+      if (right < -80 || left > size.width + 8) continue;
+
+      final kind = e.kind;
+      final base = kDomainColors[e.domain] ?? kInkBlack;
+      final selected = e.id == selectedEventId;
+      // Intensity reads as weight, not as alarm: a 轻 marker is quieter, a
+      // 重 one is solid. Nothing here says 吉 or 凶.
+      final alpha = switch (e.intensity) {
+        EventIntensity.high => 0.95,
+        EventIntensity.medium => 0.72,
+        EventIntensity.low => 0.48,
+      };
+
+      final top =
+          rows.laneTop(lanes[e.id]) +
+          (TimelineRows.laneHeight - TimelineRows.markerHeight) / 2;
+      final rect = Rect.fromLTRB(
+        left,
+        top,
+        right,
+        top + TimelineRows.markerHeight,
+      );
+      final rrect = RRect.fromRectAndRadius(
+        rect,
+        const Radius.circular(TimelineRows.markerHeight / 2),
+      );
+
+      canvas.drawRRect(rrect, Paint()..color = base.withValues(alpha: alpha));
+      if (selected) {
+        canvas.drawRRect(
+          rrect.inflate(2.5),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2
+            ..color = kPrimaryRed,
+        );
+      }
+      // A user-placed marker is marked as such on the axis, not only in the
+      // detail panel: the two must never be mistaken for each other.
+      if (e.origin.isUsers) {
+        canvas.drawCircle(
+          Offset(rect.left + 4, rect.center.dy),
+          2,
+          Paint()..color = kPaperCream,
+        );
+      }
+
+      if (!labelled || kind == null) continue;
+      final tp = _text(kind.label, 11, base, FontWeight.w600);
+      final labelX = rect.right + 4;
+      if (labelX + tp.width > size.width) continue;
+      tp.paint(canvas, Offset(labelX, rect.center.dy - tp.height / 2));
+    }
   }
 
   // ---------------------------------------------------------------- 大运
@@ -185,10 +310,10 @@ class TimelinePainter extends CustomPainter {
       // begins — age 30's tick is the boundary into age 30, not its middle.
       final x = geometry.xForAge(age.toDouble());
       final isMajor = age % major == 0;
-      final top = TimelineRows.yearTop;
+      final top = rows.yearTop;
       final bottom = isMajor
-          ? TimelineRows.yearBottom
-          : TimelineRows.yearTop + TimelineRows.yearHeight * 0.5;
+          ? rows.yearBottom
+          : rows.yearTop + TimelineRows.yearHeight * 0.5;
       canvas.drawLine(
         Offset(x, top),
         Offset(x, bottom),
@@ -207,10 +332,7 @@ class TimelinePainter extends CustomPainter {
           if (tp.width <= geometry.pxPerYear - 3) {
             tp.paint(
               canvas,
-              Offset(
-                x + (geometry.pxPerYear - tp.width) / 2,
-                TimelineRows.yearTop + 4,
-              ),
+              Offset(x + (geometry.pxPerYear - tp.width) / 2, rows.yearTop + 4),
             );
           }
         }
@@ -221,7 +343,7 @@ class TimelinePainter extends CustomPainter {
   // ---------------------------------------------------------------- 轴
 
   void _paintAxis(Canvas canvas, Size size) {
-    final y = TimelineRows.axisTop;
+    final y = rows.axisTop;
     canvas.drawLine(
       Offset(0, y),
       Offset(size.width, y),
@@ -277,7 +399,7 @@ class TimelinePainter extends CustomPainter {
 
     canvas.drawLine(
       Offset(x, TimelineRows.decadeTop - 6),
-      Offset(x, TimelineRows.axisTop),
+      Offset(x, rows.axisTop),
       Paint()
         ..color = kPrimaryRed
         ..strokeWidth = 1.6,
@@ -303,6 +425,10 @@ class TimelinePainter extends CustomPainter {
   @override
   bool shouldRepaint(TimelinePainter old) =>
       old.span != span ||
+      old.events != events ||
+      old.lanes != lanes ||
+      old.rows.laneCount != rows.laneCount ||
+      old.selectedEventId != selectedEventId ||
       old.geometry.pxPerYear != geometry.pxPerYear ||
       old.geometry.offset != geometry.offset ||
       old.geometry.viewportWidth != geometry.viewportWidth ||
