@@ -11,7 +11,10 @@ import 'labels.dart';
 /// plus on-demand 流月/流日 timeline expansion.
 class ChartService {
   static const double _timezone = 8.0;
-  static const int _decadeCount = 8;
+  /// 12 steps of 大运, enough to reach 虚岁 120 (两甲子) on any chart: the
+  /// earliest possible 起运 is age 1, which puts the twelfth decade at
+  /// 111-120. The life timeline needs the full span; eight stopped at ~90.
+  static const int _decadeCount = 12;
 
   static const List<String> _lunarMonthNames = [
     '正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊',

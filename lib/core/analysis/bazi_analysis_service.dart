@@ -94,7 +94,7 @@ class BaziAnalysisService {
   /// Cached AI text is the *output* of a specific engine version, so a bump
   /// must invalidate it — otherwise an engine improvement is invisible to
   /// anyone who already ran the analysis once.
-  static const int kEngineVersion = 4;
+  static const int kEngineVersion = 5;
 
   static String _cachePrefix(String kind) => 'ai_${kind}_v${kEngineVersion}_';
 
