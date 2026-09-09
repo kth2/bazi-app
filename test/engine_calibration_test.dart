@@ -96,6 +96,9 @@ void main() {
     expect(s.adverse, greaterThan(0));
 
     final ratio = s.favourable / s.adverse;
+    // ignore: avoid_print
+    print('CALIB ratio=${ratio.toStringAsFixed(2)} 吉${s.favourable}/凶${s.adverse} '
+        '偏吉${s.leanPos}/偏凶${s.leanNeg}');
     expect(ratio, greaterThan(0.6),
         reason: 'engine has drifted pessimistic: 吉${s.favourable}/凶${s.adverse}');
     expect(ratio, lessThan(1.7),

@@ -29,17 +29,18 @@ class EventDomain {
     career: [
       '职位晋升', '权责加重', '职务变动', '离职转换', '创业自立', '职场是非',
       '迁移变动', '压力解除', '摆脱束缚', '收束心性', '远行出行', '官非诉讼',
+      '迁居搬家', '名声显扬',
     ],
     wealth: [
       '收入增益', '投资置产', '意外之财', '破财损耗', '因财劳碌', '资产变动',
-      '卸下重负', '免于分夺',
+      '卸下重负', '免于分夺', '置业安家',
     ],
     marriage: [
       '婚恋成合', '感情生变', '配偶宫动', '情感牵绊', '第三者之扰', '子女之事',
     ],
     study: [
       '文书学业', '考试资格', '技艺才华', '进修拓展', '学途受阻', '破印得用',
-      '贵人相助',
+      '贵人相助', '负笈远游',
     ],
     health: [
       '劳神耗气', '旧患复发', '外伤意外', '情志郁结', '身心失调',
@@ -139,8 +140,12 @@ class _Need {
   final String targetKind;
   final Set<ActivationEffect> effects;
 
-  /// null matches any stance.
-  final int? stance;
+  /// Acceptable 喜忌 values; null matches any.
+  ///
+  /// A set rather than a single value because several of these readings turn
+  /// on 「不是忌神」 rather than on 「是喜神」 — 伤官见官 is a problem when
+  /// the 食伤 is 忌, and unremarkable when it is not.
+  final Set<int>? stance;
   final Set<InteractionKind>? via;
 
   const _Need({
@@ -155,7 +160,7 @@ class _Need {
       a.target == target &&
       a.targetKind == targetKind &&
       effects.contains(a.effect) &&
-      (stance == null || a.stance == stance) &&
+      (stance == null || stance!.contains(a.stance)) &&
       (via == null || (a.via != null && via!.contains(a.via)));
 }
 
@@ -178,12 +183,21 @@ class _ConjunctionRule {
   /// plain rule — this is where that is tuned.
   final double weight;
 
+  /// Require the 岁运 pillar of this layer to carry a 五行 in its branch.
+  ///
+  /// A property of the pillar rather than of an activation, so it cannot be
+  /// expressed as a [_Need]. Exists for 置业安家: 土为田宅之基, which
+  /// strengthens the reading without being required for it — hence a second,
+  /// heavier rule variant rather than a condition on the first.
+  final String? zhiWuXing;
+
   const _ConjunctionRule({
     required this.needs,
     required this.domain,
     required this.subtype,
     required this.polarity,
     this.weight = 1.0,
+    this.zhiWuXing,
   });
 }
 
@@ -268,16 +282,6 @@ class EventInferenceEngine {
       target: '驿马', effect: ActivationEffect.strengthen,
       domain: EventDomain.career, subtype: '远行出行',
       polarity: EventPolarity.mixed,
-    ),
-    _EventRule(
-      target: '天乙贵人', effect: ActivationEffect.strengthen,
-      domain: EventDomain.study, subtype: '贵人相助',
-      polarity: EventPolarity.favourable,
-    ),
-    _EventRule(
-      target: '天乙贵人', effect: ActivationEffect.bind,
-      domain: EventDomain.study, subtype: '贵人相助',
-      polarity: EventPolarity.favourable,
     ),
 
     // ---------------- 财星 ----------------
@@ -473,7 +477,7 @@ class EventInferenceEngine {
         _Need(
           target: '官杀',
           effects: {ActivationEffect.strengthen},
-          stance: -1,
+          stance: {-1},
         ),
         _Need(
           target: '日柱',
@@ -488,6 +492,174 @@ class EventInferenceEngine {
       weight: 0.95,
     ),
 
+    // ---- 贵人相助：天乙贵人 + 一个落地的渠道 ------------------------------
+    //
+    // 上一版把「岁运带天乙贵人」直接断为贵人相助，实测它成了全 App 最大的
+    // 吉性事件类（240 盘一年里 142 次，比收入增益 86 与职位晋升 73 都多）。
+    // 那不是一个能站住的读法：天乙贵人临是常见的修饰，不是一年的主事。
+    //
+    // 贵人要落到实处得有渠道 —— 印（师长、文书、提携）或官（位置、机会）。
+    // 两条分写，因为 _Need 只匹配单一目标。
+    _ConjunctionRule(
+      needs: [
+        _Need(target: '天乙贵人', targetKind: '神煞', effects: {
+          ActivationEffect.strengthen,
+          ActivationEffect.bind,
+          ActivationEffect.release,
+        }),
+        _Need(
+          target: '印星',
+          effects: {ActivationEffect.strengthen},
+          stance: {1, 0},
+        ),
+      ],
+      domain: EventDomain.study,
+      subtype: '贵人相助',
+      polarity: EventPolarity.favourable,
+      weight: 0.95,
+    ),
+    _ConjunctionRule(
+      needs: [
+        _Need(target: '天乙贵人', targetKind: '神煞', effects: {
+          ActivationEffect.strengthen,
+          ActivationEffect.bind,
+          ActivationEffect.release,
+        }),
+        _Need(
+          target: '官杀',
+          effects: {ActivationEffect.strengthen},
+          stance: {1},
+        ),
+      ],
+      domain: EventDomain.study,
+      subtype: '贵人相助',
+      polarity: EventPolarity.favourable,
+      weight: 0.95,
+    ),
+
+    // ---- 出国留学：驿马主动 + 印星主学业 --------------------------------
+    //
+    // 「驿马临印，因学奔波」。必要条件是岁运带驿马（动象），加强条件是同层
+    // 印星被引动（求学象）。分两条：印星为喜用时把握度更高，中性时仍成立但
+    // 弱一档；印星为忌则不出——那是奔波而非求学。
+    _ConjunctionRule(
+      needs: [
+        _Need(target: '驿马', targetKind: '神煞', effects: {
+          ActivationEffect.strengthen,
+          ActivationEffect.release,
+        }),
+        _Need(
+          target: '印星',
+          effects: {ActivationEffect.strengthen},
+          stance: {1},
+        ),
+      ],
+      domain: EventDomain.study,
+      subtype: '负笈远游',
+      // 出国是一件**发生**的事，不是一份收益 —— 与「婚恋成合」「进修拓展」
+      // 同类，故 mixed。把人生大事标成吉，会让整台引擎系统性偏乐观：实测
+      // 这一批规则曾把 240 盘的吉:凶 从 1.14 推到 1.60。
+      polarity: EventPolarity.mixed,
+      weight: 1.0,
+    ),
+    _ConjunctionRule(
+      needs: [
+        _Need(target: '驿马', targetKind: '神煞', effects: {
+          ActivationEffect.strengthen,
+          ActivationEffect.release,
+        }),
+        _Need(
+          target: '印星',
+          effects: {ActivationEffect.strengthen},
+          stance: {0},
+        ),
+      ],
+      domain: EventDomain.study,
+      subtype: '负笈远游',
+      polarity: EventPolarity.mixed,
+      weight: 0.8,
+    ),
+
+    // ---- 买房：印主屋宅 + 财主购买力 ------------------------------------
+    //
+    // 印星是「有房象」，财星是「买得起」。两者缺一都不成事：印动而无财是
+    // 想住不是能买，财动而无印是有钱不是置产。
+    _ConjunctionRule(
+      needs: [
+        _Need(
+          target: '财星',
+          effects: {ActivationEffect.strengthen},
+          stance: {1},
+        ),
+        _Need(target: '印星', effects: {ActivationEffect.strengthen}),
+      ],
+      domain: EventDomain.wealth,
+      subtype: '置业安家',
+      // 置产是承担，不是进项：同年既是资产也是负债。mixed。
+      polarity: EventPolarity.mixed,
+      weight: 0.95,
+    ),
+
+    // 土为田宅之基。财印同现而岁运地支属土（尤其辰戌丑未财库），置产之象更
+    // 实，故单列一条更重的，而不是把土设成必要条件。
+    _ConjunctionRule(
+      needs: [
+        _Need(
+          target: '财星',
+          effects: {ActivationEffect.strengthen},
+          stance: {1},
+        ),
+        _Need(target: '印星', effects: {ActivationEffect.strengthen}),
+      ],
+      zhiWuXing: '土',
+      domain: EventDomain.wealth,
+      subtype: '置业安家',
+      polarity: EventPolarity.mixed,
+      weight: 1.05,
+    ),
+
+    // ---- 搬家：驿马动 + 居所（印星）被冲合刑 ------------------------------
+    //
+    // 与买房同源而异象：动的是居所本身而不是购买力，所以印星这里要的是被
+    // **冲/合/刑**，不是被生扶。
+    _ConjunctionRule(
+      needs: [
+        _Need(target: '驿马', targetKind: '神煞', effects: {
+          ActivationEffect.strengthen,
+          ActivationEffect.release,
+        }),
+        _Need(target: '印星', effects: {
+          ActivationEffect.release,
+          ActivationEffect.bind,
+          ActivationEffect.damage,
+        }),
+      ],
+      domain: EventDomain.career,
+      subtype: '迁居搬家',
+      polarity: EventPolarity.mixed,
+      weight: 0.9,
+    ),
+
+    // ---- 名气提升：食伤主才华 + 官星主名位 -------------------------------
+    //
+    // 食伤是名声的来源，官星是社会的认可，两者同现才是「才华被认可」。
+    // 关键是那条例外：**伤官见官而无制**主是非不主名气，所以食伤为忌时
+    // 这条不出——stance 限定在喜与中性。
+    _ConjunctionRule(
+      needs: [
+        _Need(
+          target: '食伤',
+          effects: {ActivationEffect.strengthen},
+          stance: {1},
+        ),
+        _Need(target: '官杀', effects: {ActivationEffect.strengthen}),
+      ],
+      domain: EventDomain.career,
+      subtype: '名声显扬',
+      polarity: EventPolarity.favourable,
+      weight: 0.9,
+    ),
+
     // 寿元关注：在手术风险之上再加一条 —— 印星或比劫（身之根）同时被冲刑。
     // 三条同年齐备本就罕见，这正是意图：区间提示，不是断点。
     _ConjunctionRule(
@@ -495,7 +667,7 @@ class EventInferenceEngine {
         _Need(
           target: '官杀',
           effects: {ActivationEffect.strengthen},
-          stance: -1,
+          stance: {-1},
         ),
         _Need(
           target: '日柱',
@@ -600,7 +772,7 @@ class EventInferenceEngine {
       }
     }
 
-    _inferConjunctions(structure, activations, out);
+    _inferConjunctions(structure, context, activations, out);
 
     final list = out.values.toList()
       ..sort((a, b) {
@@ -619,6 +791,7 @@ class EventInferenceEngine {
   /// them as one would make the heaviest claims the easiest to trigger.
   static void _inferConjunctions(
     NatalStructure structure,
+    TemporalContext context,
     List<Activation> activations,
     Map<String, EventCandidate> out,
   ) {
@@ -632,6 +805,12 @@ class EventInferenceEngine {
       if (!layer.canOriginateEvents) continue;
 
       for (final rule in _conjunctions) {
+        if (rule.zhiWuXing != null &&
+            !context.luckPillars.any((p) =>
+                p.layer == layer && p.zhiWuXing == rule.zhiWuXing)) {
+          continue;
+        }
+
         final matched = <Activation>[];
         for (final need in rule.needs) {
           Activation? best;
@@ -664,6 +843,8 @@ class EventInferenceEngine {
           basis: [
             '原局：${structure.pattern.geJu}·${structure.status.label}',
             for (final a in matched) '${a.layer.label}：${a.mechanism}',
+            if (rule.zhiWuXing != null)
+              '${layer.label}地支属${rule.zhiWuXing}',
             '数条同时成立，断为${rule.domain}·${rule.subtype}'
                 '（${rule.polarity.label}）',
           ],

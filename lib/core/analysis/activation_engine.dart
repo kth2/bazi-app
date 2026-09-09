@@ -254,6 +254,27 @@ class LuckActivationEngine {
           ));
         }
 
+        // 原局的驿马柱被冲刑 —— 「冲动驿马」，与「岁运带驿马」是两条不同的
+        // 动象，都算。前者是原局的马被摇动，后者是马运走到。
+        //
+        // 单独看，原局带不带驿马是一辈子的常量、说不出是哪一年（上一期实测
+        // 过），所以这里只在**被冲刑合的那一年**才发一条。
+        if (!_ambient.contains(i.kind)) {
+          for (final marker in _natalShenShaAt(context, party.position)) {
+            if (!kEventShenSha.contains(marker)) continue;
+            out.add(Activation(
+              layer: i.firingLayer,
+              target: marker,
+              targetKind: '神煞',
+              effect: effect,
+              intensity: intensity * 0.8,
+              stance: 0,
+              via: i.kind,
+              mechanism: '${i.type}：${party.position}带$marker，被${effect.label}',
+            ));
+          }
+        }
+
         // The palace itself is hit — 日支 being struck is a marriage event
         // regardless of which 十神 happens to sit there. Ambient kinds are
         // too diffuse to claim a palace was stirred.
@@ -324,6 +345,13 @@ class LuckActivationEngine {
   /// 神煞 that name an event when they arrive. Everything else bazi_core
   /// computes describes a flavour of the chart, not something that happens.
   static const Set<String> kEventShenSha = {'驿马', '天乙贵人'};
+
+  static List<String> _natalShenShaAt(TemporalContext context, String position) {
+    for (final p in context.chart.pillars) {
+      if (p.position == position) return p.shenSha;
+    }
+    return const [];
+  }
 
 
   static List<Activation> _capInteractionsPerLayer(List<Activation> sorted) {
