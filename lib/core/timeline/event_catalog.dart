@@ -81,9 +81,11 @@ class EventKind {
 
 /// The registry of event kinds.
 ///
-/// Coverage note: 出国留学、买房搬家、名气提升 still need conjunction 判据 of a
-/// shape the rule table cannot express (驿马+印星、印星+财星、食伤+官星), and
-/// stay deliberately absent rather than faked by re-labelling a近似 subtype.
+/// Coverage note: every kind the requirements named now exists. The three
+/// that needed conjunction 判据 — 出国留学 (驿马+印星), 买房搬家 (印星+财星 /
+/// 驿马+印星受冲), 名气提升 (食伤+官星) — are built on criteria the owner
+/// supplied; what each one can and cannot express is recorded in
+/// `docs/life-timeline-design.md` §16 rather than papered over here.
 class EventCatalog {
   const EventCatalog._();
 
@@ -274,6 +276,16 @@ class EventCatalog {
       maxAge: _kWorkingMaxAge,
     ),
 
+    // 印星（屋宅）+ 财星（购买力）同时被引动。
+    EventKind(
+      id: 'wealth.home',
+      label: '置业安家',
+      domain: EventDomain.wealth,
+      subtype: '置业安家',
+      minAge: _kWorkingAge,
+      maxAge: _kWorkingMaxAge,
+    ),
+
     // ---------------------------------------------------------- 婚姻
     EventKind(
       id: 'marriage.union',
@@ -327,6 +339,24 @@ class EventCatalog {
       domain: EventDomain.marriage,
       subtype: '子女之事',
       minAge: _kParentingAge,
+      maxAge: _kWorkingMaxAge,
+    ),
+
+    // 驿马动 + 印星（居所）被冲合刑。
+    EventKind(
+      id: 'career.moving',
+      label: '迁居搬家',
+      domain: EventDomain.career,
+      subtype: '迁居搬家',
+    ),
+
+    // 食伤（才华）+ 官星（名位），且食伤非忌 —— 伤官见官无制主是非不主名。
+    EventKind(
+      id: 'career.fame',
+      label: '名声显扬',
+      domain: EventDomain.career,
+      subtype: '名声显扬',
+      minAge: _kWorkingAge,
       maxAge: _kWorkingMaxAge,
     ),
 
@@ -395,6 +425,16 @@ class EventCatalog {
       domain: EventDomain.study,
       subtype: '贵人相助',
       minAge: _kSchoolAge,
+    ),
+
+    // 驿马（动）+ 印星（学）。出国留学的映射。
+    EventKind(
+      id: 'study.abroad',
+      label: '负笈远游',
+      domain: EventDomain.study,
+      subtype: '负笈远游',
+      minAge: _kSchoolAge,
+      maxAge: _kWorkingMaxAge,
     ),
 
     // ---------------------------------------------------------- 健康
