@@ -1,0 +1,302 @@
+# 人生时间线（2甲子 · 0-120岁）技术方案
+
+> 状态：设计稿，待确认后实施。本文只定方案与数据结构，不含完整实现。
+
+## 0. 先修正一个前提
+
+需求里写的是 TypeScript 类型定义，但本仓库是 **Flutter / Dart**
+（`pubspec.yaml` + `lib/**.dart`，无任何 TS）。下面给出的是等价的 Dart 定义。
+若原意是要另起一个 Web/React 前端，那是另一件事，需先确认。
+
+## 1. 两个实测事实（决定了架构）
+
+以 `丙辰 壬辰 丁巳 癸卯`（起运 10.1 岁）实测：
+
+| 项目 | 实测值 | 影响 |
+|---|---|---|
+| `ChartService` 返回的大运数 | **8 步（11-90 岁）** | 覆盖不到 120 岁，须扩到 12 步 |
+| 每年跑完整 `ReasoningReport` | **7.5 ms** | 120 年约 900ms，扫全生会卡顿 |
+| 每年只跑「引动+事件」精简路径 | **0.1 ms** | 120 年约 12ms，可即时全扫 |
+
+**结论**：应期（`YingQiEngine`）排期占了 98% 的成本。
+时间线的自动推荐走**精简路径**；应期细节等用户点开某一年时**按需计算**。
+
+### 必要的前置改动
+
+`lib/core/engine/chart_service.dart`
+
+```dart
+static const int _decadeCount = 8;   // → 12
+```
+
+12 步覆盖起运+120 年，再按 120 岁截断。0 岁到起运之间已有
+`ChartResult.preDaYunYears`（小运期，实测 10 条），时间线首段直接复用。
+
+## 2. 模块拆分
+
+```
+lib/core/timeline/
+  life_span.dart          年龄↔公历↔大运/流年 的坐标换算（纯函数，可测）
+  timeline_event.dart     LifeEvent 模型：类型/强度/区间/来源/备注
+  event_catalog.dart      事件类型注册表（可配置，含敏感标记）
+  timeline_scanner.dart   引擎 → 自动推荐事件（走精简路径）
+  timeline_store.dart     用户增删改的持久化（drift，用户数据）
+
+lib/features/timeline/
+  timeline_page.dart      页面骨架 + 缩放/滚动状态
+  timeline_painter.dart   CustomPainter：大运色块 + 流年刻度 + 事件标记
+  timeline_geometry.dart  像素↔年龄 映射、命中测试（被 painter 与拖拽共用）
+  event_palette.dart      工具栏（可拖出的事件图标）
+  event_editor_sheet.dart 编辑/删除/调区间/调强度
+  timeline_settings.dart  敏感类别开关 + 免责声明
+```
+
+依赖方向：`features/timeline` → `core/timeline` → `core/analysis`。
+**反向禁止**，理由见第 7 节。
+
+## 3. 数据结构（Dart）
+
+### 3.1 坐标：一切以「年龄」为轴
+
+```dart
+/// 时间线的坐标系。年龄是主轴，公历年份是派生量。
+class LifeSpan {
+  final ChartResult chart;
+  final int maxAge; // 120
+
+  /// 起运年龄（含小数），0..qiYunAge 属小运期。
+  double get qiYunAge => chart.qiYunAge;
+
+  /// 年龄 → 公历年（虚岁口径，与 FlowYearData.age 一致）。
+  int calendarYearAt(double age);
+
+  /// 年龄 → 所在大运，未起运或超出范围返回 null。
+  DecadeData? decadeAt(double age);
+
+  /// 年龄 → 所在流年。
+  FlowYearData? flowYearAt(double age);
+}
+```
+
+### 3.2 事件锚点：存年龄区间，不存索引
+
+```dart
+/// 事件在时间线上的位置。
+///
+/// 存年龄（double）而不是大运下标或数组位置：出生时间一旦被修正、
+/// 或大运步数从 8 改到 12，索引全部失效，而年龄区间不受影响，
+/// 可随时重新解析到新的大运/流年。
+class TimelineAnchor {
+  final double startAge;
+  final double endAge;   // == startAge 表示单点事件
+
+  bool get isSpan => endAge > startAge;
+}
+```
+
+### 3.3 事件本体
+
+```dart
+enum EventIntensity { low, medium, high }
+
+/// 事件从哪来 —— 决定它能否被重算覆盖。
+enum EventOrigin {
+  suggested, // 引擎推荐，重算时可被替换
+  userMoved, // 引擎推荐后被用户拖动过，重算时保留
+  userAdded, // 用户手工添加，引擎绝不触碰
+}
+
+class LifeEvent {
+  final String id;
+  final String kindId;          // 见 EventCatalog
+  final TimelineAnchor anchor;
+  final EventIntensity intensity;
+  final EventOrigin origin;
+
+  /// 引擎给出的把握度 0..1（用户添加的为 null）。
+  final double? confidence;
+
+  /// 推荐理由链，复用 EventCandidate.basis。
+  final List<String> basis;
+
+  final String note;            // 用户备注
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+}
+```
+
+### 3.4 事件类型注册表（可配置）
+
+```dart
+enum EventSensitivity {
+  normal,   // 默认显示
+  guarded,  // 默认关闭，需用户主动开启
+}
+
+class EventKind {
+  final String id;              // 'career.promotion'
+  final String label;           // 升职
+  final String domain;          // 复用 EventDomain：事业/财富/婚姻/学业发展/健康
+  final String icon;            // 图标名
+  final bool defaultSpan;       // 天然是区间（如财运高峰）还是单点（如结婚）
+  final EventSensitivity sensitivity;
+  final String? disclaimer;     // guarded 类必填
+}
+```
+
+`EventCatalog` 是一张常量表 + 用户覆盖层（开关状态存本地）。
+
+## 4. 事件清单与现有引擎的对应
+
+现有 `EventDomain.subtypes` 已覆盖大半。需求清单的映射与缺口：
+
+| 需求事件 | 现有子类型 | 缺口 / 判据 |
+|---|---|---|
+| 重要考试、金榜题名 | 学业发展·考试资格 / 文书学业 | 印星得力 + 官印相生；已有 |
+| 出国留学 | — | **新增**：驿马 + 印星（神煞已算在 `PillarData.shenSha`） |
+| 恋爱/正缘、结婚 | 婚姻·婚恋成合 | 已有（男看财、女看官，已按性别分流） |
+| 离婚风险 | 婚姻·感情生变 / 配偶宫动 | 已有，但须标 **guarded** |
+| 生子 | 婚姻·子女之事 | 判据待确认：男以官杀为子、女以食伤为子 |
+| 搬家/买房 | — | **新增**：印星（宅）+ 财星，或 驿马动 |
+| 升职 | 事业·职位晋升 | 已有 |
+| 创业 | 事业·创业自立 | 已有 |
+| 换工作/跳槽 | 事业·职务变动 / 离职转换 | 已有 |
+| 财运高峰 | 财富·收入增益 | 已有，天然是**区间** |
+| 破财风险 | 财富·破财损耗 | 已有 |
+| 贵人相助 | — | **新增**：天乙贵人/太极贵人 神煞 + 印星被引动 |
+| 远行/出差/移民 | 事业·迁移变动 | 部分有；移民需 驿马 + 冲提纲 |
+| 健康需注意 | 健康·各子类 | 已有 |
+| 手术风险窗口 | — | **新增**，**guarded**：日主受重克 + 刑冲 |
+| 寿元参考区间 | — | **新增**，**guarded**，见第 5 节 |
+| 名气提升 | — | **新增**：食伤透显 + 官星 |
+| 学习新技能/转型 | 学业发展·技艺才华 / 进修拓展 | 已有 |
+| 官司风险 | 事业·职场是非 | 部分有；需加 官杀+刑 的专门判据，**guarded** |
+
+新增判据都写成 `_EventRule` 风格的表项，与现有 `EventInferenceEngine`
+同一套 stance/effect 机制，不另起炉灶。
+
+## 5. 敏感事件的处理边界
+
+按需求：离婚、大病/手术、寿元、官司默认关闭，需主动开启。除此之外：
+
+**寿元一项不做「预测死亡年份」。** 引擎不会输出某一年为终点，也不会给出
+「寿元 X 岁」。开启后只会把「日主受克极重、且多重刑冲叠加」的**年龄区间**
+标为 *需特别注意健康的年份*，与其他健康事件同一视觉层级，不做特殊强调。
+
+理由不只是措辞：单点死亡预测既无法验证，也会让一个参考工具变成对用户有
+实际伤害的断言。区间式的健康提示保留了信息，去掉了伤害。
+
+强制文案（开启任一 guarded 类别时常驻显示）：
+
+> 以下标记依传统命理规则推算，仅供参考，不构成医疗、法律或财务建议。
+> 命理无法预知具体事件，如有健康疑虑请就医。
+
+实现上：`EventSensitivity.guarded` 的类型，
+- 默认 `enabled = false`；
+- 开启需经一次确认弹窗（读过免责声明）；
+- 渲染时颜色饱和度低于普通事件，不用红色警示色。
+
+## 6. 时间线组件实现思路
+
+### 6.1 不要用 `InteractiveViewer`
+
+`InteractiveViewer` 做的是二维矩阵变换，和 `Draggable` 抢手势，且拖放时
+要把全局坐标反变换回内容坐标才能命中测试，容易出错。
+
+改用：**横向 `SingleChildScrollView`（平移）+ 一个 `pxPerYear` 状态（缩放）**。
+
+```dart
+// 缩放只改一个标量，布局宽度随之变化，滚动由 ScrollView 天然处理。
+double pxPerYear;           // 缩放级别
+double get contentWidth => pxPerYear * maxAge;
+double xForAge(double age) => age * pxPerYear - scrollOffset;
+double ageForX(double x)   => (x + scrollOffset) / pxPerYear;
+```
+
+好处：命中测试只是一维除法；滚动惯性、滚动条、键盘都免费获得。
+
+双指缩放用 `GestureDetector(onScaleUpdate:)` 只取 `details.horizontalScale`，
+更新 `pxPerYear` 并同步修正 `scrollOffset` 使**捏合中心的年龄保持不动**：
+
+```dart
+final anchorAge = ageForX(focalX);
+pxPerYear = (pxPerYear * scale).clamp(minPx, maxPx);
+scrollOffset = anchorAge * pxPerYear - focalX;
+```
+
+### 6.2 三档 LOD（缩放决定画什么）
+
+| pxPerYear | 显示 |
+|---|---|
+| < 4 | 只画大运色块 + 每 10 年标注，事件聚合成簇 |
+| 4-16 | 大运色块 + 每 5 年刻度，事件分开 |
+| > 16 | 逐年刻度 + 干支 + 事件全展开 |
+
+避免 120 年 × 每年多事件时一次性画上千个 widget。
+
+### 6.3 绘制与交互分层
+
+- `CustomPainter` 画**静态层**：大运色块、流年刻度、网格。
+- 事件标记用真实 widget（`Positioned`）叠在上层 —— 因为要能点、能拖、能长按。
+  数量可控（LOD 已聚合），不至于爆炸。
+- `timeline_geometry.dart` 同时被 painter 和拖放逻辑引用，保证两者坐标一致。
+  这是最容易出 bug 的地方：**一份映射，两处使用**。
+
+### 6.4 拖放
+
+- 工具栏项是 `Draggable<EventKind>`。
+- 时间线整体是一个 `DragTarget<EventKind>`，`onAcceptWithDetails` 拿到全局
+  坐标 → `RenderBox.globalToLocal` → `ageForX` → 按当前 LOD 吸附到
+  最近的流年（放大时）或大运起点（缩小时）。
+- 已存在的事件用 `LongPressDraggable` 拖动改期；区间事件两端各一个把手，
+  拖把手改 `startAge`/`endAge`。
+
+## 7. 事件与大运/流年的关联，以及一条红线
+
+**关联方式**：事件只存年龄区间（`TimelineAnchor`），显示时才解析到
+大运/流年（`LifeSpan.decadeAt` / `flowYearAt`）。所以：
+
+- 换算逻辑集中一处，改大运步数、改起运算法都不会让存量事件错位；
+- 同一事件天然能同时回答「在哪一步大运」「在哪一年」；
+- 区间事件可跨大运，不需要拆成多条。
+
+**红线**：用户拖动/新增的事件**不得回流进推理引擎**。
+
+这与案例库那条守则是同一条：`理论固定，推演结构化，AI负责解释`。
+用户把「升职」拖到某一年，不能因此改变规则权重或格局判定，否则理论就被
+使用者的记忆悄悄改写了。`test/case_guardrail_test.dart` 已经在守
+`core/analysis`、`core/rules`、`core/engine`、`core/models` 不得 import
+案例库；`core/timeline` 应加入同一张禁止清单。
+
+（时间线事件要不要作为**上下文**写进 AI 提示词，是另一个问题，需单独决定——
+见第 9 节待确认事项。）
+
+## 8. 建议的实施分期
+
+| 期 | 内容 | 可独立验收 |
+|---|---|---|
+| P1 | `_decadeCount` 8→12；`LifeSpan` 换算 + 单元测试 | 是 |
+| P2 | 只读时间线：大运色块 + 流年刻度 + 缩放/滚动 | 是 |
+| P3 | `timeline_scanner` 自动推荐（精简路径）+ 渲染标记 | 是 |
+| P4 | 拖放增改删、区间把手、强度、持久化 | 是 |
+| P5 | 事件类型扩充（贵人/留学/买房/名气…）+ 敏感开关与免责 | 是 |
+
+每期都能单独跑通、单独合并，不需要一次性做完。
+
+## 9. 需要你确认的事项
+
+代码侧我不需要你提供任何东西 —— 排盘结果、大运/流年数组、事件推断引擎、
+持久化范式都在仓库里，我已核对过。要定的是产品与命理口径：
+
+1. **120 岁怎么算**：虚岁 0-120，还是起运后 120 年？现有 `FlowYearData.age`
+   是虚岁，建议统一用虚岁。
+2. **重算策略**：用户拖动过某个推荐事件后，重新扫描时该事件保留还是覆盖？
+   （方案里用 `EventOrigin` 区分，默认「拖过就保留」。）
+3. **生子的判据**：男以官杀为子、女以食伤为子 —— 按这个口径实现？
+4. **持久化范围**：事件挂在「命盘」（八字+性别）上，还是挂在案例库的某个案例上？
+   前者更通用，后者与已有回填流程一致。
+5. **敏感类别**：除需求点名的四类（离婚/手术/寿元/官司），还要不要把
+   「破财风险」也设为默认关闭？
+6. **时间线事件要不要进 AI 提示词**：进的话 AI 能结合用户已知经历作答，
+   但要明确它只是**上下文**，不参与格局判定与权重。不进则完全隔离。
+   建议：先不进，等时间线稳定后再单独决定。
