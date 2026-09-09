@@ -1,12 +1,20 @@
 import '../analysis/event_inference.dart';
 
-/// Whether a kind is shown by default.
+/// How heavy a claim a kind makes about someone's life.
 enum EventSensitivity {
-  /// Shown by default.
+  /// Ordinary.
   normal,
 
-  /// Off until the user opts in, having read the disclaimer.
-  guarded,
+  /// 离婚、手术、寿元、官司 — the readings a person is most likely to be
+  /// upset by, and most likely to want anyway.
+  ///
+  /// **Shown by default.** These were hidden until the owner decided that
+  /// withholding a reading is itself a judgement, and that the person asking
+  /// is the one who gets to weigh whether they believe it. What survives that
+  /// decision is the honesty rather than the gate: a sensitive kind carries a
+  /// standing disclaimer, is worded as years to pay attention to rather than
+  /// as a verdict, and can be switched off individually in settings.
+  sensitive,
 }
 
 /// One kind of life event the timeline can display.
@@ -35,7 +43,7 @@ class EventKind {
 
   final EventSensitivity sensitivity;
 
-  /// Required for [EventSensitivity.guarded] kinds.
+  /// Required for [EventSensitivity.sensitive] kinds.
   final String? disclaimer;
 
   /// Ages (虚岁) outside which this kind is not *suggested*.
@@ -65,7 +73,7 @@ class EventKind {
 
   bool suits(int age) => age >= minAge && (maxAge == null || age <= maxAge!);
 
-  bool get isGuarded => sensitivity == EventSensitivity.guarded;
+  bool get isSensitive => sensitivity == EventSensitivity.sensitive;
 
   /// The engine key this kind is fed by.
   String get engineKey => '$domain|$subtype';
@@ -73,15 +81,19 @@ class EventKind {
 
 /// The registry of event kinds.
 ///
-/// Coverage note: this phase registers the subtypes the inference engine can
-/// already produce. The kinds the requirements asked for that need *new*
-/// 判据 — 出国留学、买房搬家、贵人相助、名气提升、手术风险、寿元区间、
-/// 官司风险 — are P5, and are deliberately absent rather than faked by
-/// re-labelling a近似 subtype.
+/// Coverage note: 出国留学、买房搬家、名气提升 still need conjunction 判据 of a
+/// shape the rule table cannot express (驿马+印星、印星+财星、食伤+官星), and
+/// stay deliberately absent rather than faked by re-labelling a近似 subtype.
 class EventCatalog {
   const EventCatalog._();
 
-  /// The one disclaimer every guarded kind carries.
+  /// The disclaimer every sensitive kind carries.
+  /// Extra wording for 寿元关注 — the one kind a reader could most easily
+  /// take for something it is not.
+  static const String kLongevityDisclaimer =
+      '「寿元关注」标的是需要特别留意健康的年份区间，不是生命终点。'
+      '命理无法预知生死，本应用不做也无法做寿命预测。如有健康疑虑请就医。';
+
   static const String kGuardedDisclaimer =
       '以下标记依传统命理规则推算，仅供参考，不构成医疗、法律或财务建议。'
       '命理无法预知具体事件，如有健康疑虑请就医。';
@@ -271,13 +283,13 @@ class EventCatalog {
       minAge: _kMarriageAge,
       maxAge: _kWorkingMaxAge,
     ),
-    // 需求点名的「离婚风险」，落在引擎已有的这两个子类型上，故默认关闭。
+    // 需求点名的「离婚风险」，落在引擎已有的这两个子类型上。默认显示。
     EventKind(
       id: 'marriage.rupture',
       label: '感情生变',
       domain: EventDomain.marriage,
       subtype: '感情生变',
-      sensitivity: EventSensitivity.guarded,
+      sensitivity: EventSensitivity.sensitive,
       disclaimer: kGuardedDisclaimer,
       minAge: _kMarriageAge,
       maxAge: _kWorkingMaxAge,
@@ -287,7 +299,7 @@ class EventCatalog {
       label: '配偶宫动',
       domain: EventDomain.marriage,
       subtype: '配偶宫动',
-      sensitivity: EventSensitivity.guarded,
+      sensitivity: EventSensitivity.sensitive,
       disclaimer: kGuardedDisclaimer,
       minAge: _kMarriageAge,
       maxAge: _kWorkingMaxAge,
@@ -316,6 +328,18 @@ class EventCatalog {
       subtype: '子女之事',
       minAge: _kParentingAge,
       maxAge: _kWorkingMaxAge,
+    ),
+
+    // 官杀逢刑。刑与冲在 effect 层面同为 damage，故规则用 via 指名要刑。
+    EventKind(
+      id: 'career.lawsuit',
+      label: '官非诉讼',
+      domain: EventDomain.career,
+      subtype: '官非诉讼',
+      minAge: _kWorkingAge,
+      maxAge: _kWorkingMaxAge,
+      sensitivity: EventSensitivity.sensitive,
+      disclaimer: kGuardedDisclaimer,
     ),
 
     // ---------------------------------------------------------- 学业发展
@@ -407,6 +431,30 @@ class EventCatalog {
       subtype: '身心失调',
       defaultSpan: true,
     ),
+
+    // 杀攻身为忌 + 日柱（自身宫）逢冲或刑，同一层同时成立。
+    EventKind(
+      id: 'health.surgery',
+      label: '手术风险',
+      domain: EventDomain.health,
+      subtype: '手术风险',
+      sensitivity: EventSensitivity.sensitive,
+      disclaimer: kGuardedDisclaimer,
+    ),
+
+    // 在手术风险的两条之上再加「印星受冲刑」。
+    //
+    // 标的是**区间**，措辞是「需特别留意健康的年份」。引擎里没有任何一条
+    // 规则会输出生命终点，这一条也不会——它只把几条同时成立的年份连成一段。
+    EventKind(
+      id: 'health.longevity',
+      label: '寿元关注',
+      domain: EventDomain.health,
+      subtype: '寿元关注',
+      defaultSpan: true,
+      sensitivity: EventSensitivity.sensitive,
+      disclaimer: kLongevityDisclaimer,
+    ),
   ];
 
   static final Map<String, EventKind> byId = {for (final k in kinds) k.id: k};
@@ -419,14 +467,14 @@ class EventCatalog {
   static EventKind? forCandidate(EventCandidate c) =>
       byEngineKey['${c.domain}|${c.subtype}'];
 
-  static List<EventKind> get guarded => [
+  static List<EventKind> get sensitive => [
     for (final k in kinds)
-      if (k.isGuarded) k,
+      if (k.isSensitive) k,
   ];
 
   /// Ids shown when the user has changed nothing.
-  static Set<String> get defaultEnabledIds => {
-    for (final k in kinds)
-      if (!k.isGuarded) k.id,
-  };
+  /// Everything: nothing is hidden by default any more.
+  static Set<String> get defaultEnabledIds => allIds;
+
+  static Set<String> get allIds => {for (final k in kinds) k.id};
 }

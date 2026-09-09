@@ -67,9 +67,22 @@ class TimelineScanner {
   /// a ten-year band on a phone, and it keeps a full life near 40 markers.
   static const int kMaxPerDecade = 3;
 
-  /// Slots per step reserved for guarded kinds the user has switched on,
-  /// over and above [kMaxPerDecade].
-  static const int kMaxGuardedPerDecade = 1;
+  /// Slots per step reserved for sensitive kinds, over and above
+  /// [kMaxPerDecade].
+  ///
+  /// One, not three: these are shown by the owner's decision, but a decade
+  /// that reads as nothing but 离婚/手术/官非 is a caricature of a life, not a
+  /// timeline. The reading is available; it does not get to dominate.
+  static const int kMaxSensitivePerDecade = 1;
+
+  /// How many steps a *sensitive* kind may claim across a whole life.
+  ///
+  /// Two, against four for ordinary kinds. Measured: at four, a chart that
+  /// triggers 手术风险 at all got it in four separate decades — which reads
+  /// as a standing property of the person rather than as the two convergences
+  /// the rules actually found. Showing the reading and overstating its reach
+  /// are different things.
+  static const int kMaxSensitivePerKind = 2;
 
   /// How many steps one kind may claim across a whole life.
   ///
@@ -168,21 +181,22 @@ class TimelineScanner {
     // all steps at once rather than step by step is what lets a weaker step
     // keep a kind that a stronger step has already used up its quota on.
     //
-    // Guarded kinds are filled in a second pass with their own allowance.
-    // Sharing the first pass's slots would mean that switching a sensitive
-    // category on silently pushes an ordinary marker off the axis — the user
-    // asked to see more, and would have seen the same count.
+    // Sensitive kinds are filled in a second pass with their own allowance.
+    // Sharing the first pass's slots would mean the heaviest readings compete
+    // with routine ones for the same three places and usually lose — which is
+    // hiding them by arithmetic instead of by a switch.
     final perStep = <(int, int), int>{};
     final perKind = <String, int>{};
     final out = <LifeEvent>[];
 
-    void fill(bool guarded, int stepQuota) {
+    void fill(bool sensitive, int stepQuota) {
       final quota = <(int, int), int>{};
       for (final pick in scored) {
         final kind = EventCatalog.byId[pick.kindId];
-        if (kind == null || kind.isGuarded != guarded) continue;
+        if (kind == null || kind.isSensitive != sensitive) continue;
         if ((quota[pick.step] ?? 0) >= stepQuota) continue;
-        if ((perKind[pick.kindId] ?? 0) >= kMaxPerKind) continue;
+        final kindQuota = sensitive ? kMaxSensitivePerKind : kMaxPerKind;
+        if ((perKind[pick.kindId] ?? 0) >= kindQuota) continue;
         final event = _eventFrom(pick.kindId, pick.hits, createdAt);
         if (event == null) continue;
         quota[pick.step] = (quota[pick.step] ?? 0) + 1;
@@ -193,7 +207,7 @@ class TimelineScanner {
     }
 
     fill(false, kMaxPerDecade);
-    fill(true, kMaxGuardedPerDecade);
+    fill(true, kMaxSensitivePerDecade);
     out.sort((a, b) {
       final byAge = a.anchor.startAge.compareTo(b.anchor.startAge);
       if (byAge != 0) return byAge;

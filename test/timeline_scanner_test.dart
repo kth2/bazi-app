@@ -57,8 +57,8 @@ void main() {
     });
 
     test('every guarded kind carries a disclaimer', () {
-      expect(EventCatalog.guarded, isNotEmpty);
-      for (final k in EventCatalog.guarded) {
+      expect(EventCatalog.sensitive, isNotEmpty);
+      for (final k in EventCatalog.sensitive) {
         expect(k.disclaimer, isNotNull, reason: k.id);
         expect(k.disclaimer, isNotEmpty, reason: k.id);
       }
@@ -70,11 +70,33 @@ void main() {
       expect(EventCatalog.defaultEnabledIds, contains('wealth.loss'));
     });
 
-    test('no kind marks 寿元, and health carries no upper age bound', () {
+    test('health carries no upper age bound', () {
+      // An upper bound on a health marker would be a statement about how long
+      // someone lives. Career and marriage kinds stop being suggested at 85;
+      // health never does.
       for (final k in EventCatalog.kinds) {
-        expect(k.label, isNot(contains('寿')));
         if (k.domain == EventDomain.health) {
           expect(k.maxAge, isNull, reason: k.id);
+        }
+      }
+    });
+
+    test('寿元关注 marks a range to watch, and says so', () {
+      // The one kind a reader could most easily take for something it is not.
+      final k = EventCatalog.byId['health.longevity']!;
+      expect(k.defaultSpan, isTrue, reason: 'a point would read as an endpoint');
+      expect(k.isSensitive, isTrue);
+      expect(k.disclaimer, EventCatalog.kLongevityDisclaimer);
+      expect(k.disclaimer, contains('不是生命终点'));
+      expect(k.maxAge, isNull);
+    });
+
+    test('no rule anywhere can output an end of life', () {
+      // The guarantee is structural, not editorial: the engine has no subtype
+      // that names one, so no wording change can accidentally produce one.
+      for (final subtypes in EventDomain.subtypes.values) {
+        for (final sub in subtypes) {
+          expect(sub, isNot(anyOf(contains('死'), contains('终'), contains('亡'))));
         }
       }
     });
@@ -115,7 +137,10 @@ void main() {
               .where((e) =>
                   e.anchor.startAge >= from && e.anchor.startAge < to)
               .length;
-          expect(inStep, lessThanOrEqualTo(TimelineScanner.kMaxPerDecade),
+          expect(
+              inStep,
+              lessThanOrEqualTo(TimelineScanner.kMaxPerDecade +
+                  TimelineScanner.kMaxSensitivePerDecade),
               reason: '${entry.key}: 大运 ${d.ganZhi} has $inStep markers');
         }
       }
@@ -150,33 +175,64 @@ void main() {
   });
 
   group('sensitive categories', () {
-    test('are absent by default', () {
+    test('are shown by default — the reader decides what to believe', () {
+      var seen = 0;
       for (final entry in samples.entries) {
-        for (final e in scanOf(entry.value)) {
-          expect(e.kind!.isGuarded, isFalse, reason: entry.key);
-        }
+        seen += scanOf(entry.value).where((e) => e.kind!.isSensitive).length;
+      }
+      expect(seen, greaterThan(0),
+          reason: 'no sensitive marker appeared on any sample; they are '
+              'meant to be visible without asking');
+    });
+
+    test('every sensitive kind carries a disclaimer to show beside it', () {
+      for (final k in EventCatalog.sensitive) {
+        expect(k.disclaimer, isNotNull, reason: k.id);
+        expect(k.disclaimer, isNotEmpty, reason: k.id);
       }
     });
 
-    test('add markers when enabled rather than displacing others', () {
-      // Sharing the ordinary quota would mean switching a category on and
-      // seeing the same number of markers — or fewer of the ones you had.
-      final all = {for (final k in EventCatalog.kinds) k.id};
-      var everShown = 0;
+    test('do not crowd out the ordinary reading of a life', () {
+      // Shown by the owner's decision, but a life that reads as nothing but
+      // 离婚/手术/官非 is a caricature. Each sensitive kind gets at most two
+      // steps, against four for an ordinary one.
       for (final entry in samples.entries) {
-        final base = scanOf(entry.value);
-        final opened = scanOf(entry.value, kinds: all);
-        expect(opened.length, greaterThanOrEqualTo(base.length),
-            reason: entry.key);
-        final ordinary =
-            opened.where((e) => !e.kind!.isGuarded).map((e) => e.id).toSet();
-        expect(ordinary, containsAll(base.map((e) => e.id)),
-            reason: '${entry.key}: an ordinary marker was pushed off');
-        everShown += opened.where((e) => e.kind!.isGuarded).length;
+        final events = scanOf(entry.value);
+        final counts = <String, int>{};
+        for (final e in events) {
+          if (e.kind!.isSensitive) {
+            counts[e.kindId] = (counts[e.kindId] ?? 0) + 1;
+          }
+        }
+        for (final c in counts.entries) {
+          expect(c.value, lessThanOrEqualTo(TimelineScanner.kMaxSensitivePerKind),
+              reason: '${entry.key}: ${c.key} claims ${c.value} steps');
+        }
+        final sensitive = events.where((e) => e.kind!.isSensitive).length;
+        expect(sensitive * 2, lessThan(events.length),
+            reason: '${entry.key}: sensitive markers are the majority '
+                '($sensitive of ${events.length})');
       }
-      expect(everShown, greaterThan(0),
-          reason: 'guarded kinds never surfaced on any sample — '
-              'the toggle would be dead');
+    });
+
+    test('switching one off removes only its own markers', () {
+      final all = EventCatalog.allIds;
+      for (final entry in samples.entries) {
+        final full = scanOf(entry.value, kinds: all);
+        final without = scanOf(
+          entry.value,
+          kinds: {...all}..remove('health.surgery'),
+        );
+        expect(without.any((e) => e.kindId == 'health.surgery'), isFalse,
+            reason: entry.key);
+        // Hiding a category frees its reserved slot rather than reshuffling
+        // the ordinary markers underneath it.
+        final ordinaryBefore =
+            full.where((e) => !e.kind!.isSensitive).map((e) => e.id).toSet();
+        final ordinaryAfter =
+            without.where((e) => !e.kind!.isSensitive).map((e) => e.id).toSet();
+        expect(ordinaryAfter, ordinaryBefore, reason: entry.key);
+      }
     });
   });
 

@@ -28,7 +28,7 @@ class EventDomain {
   static const Map<String, List<String>> subtypes = {
     career: [
       '职位晋升', '权责加重', '职务变动', '离职转换', '创业自立', '职场是非',
-      '迁移变动', '压力解除', '摆脱束缚', '收束心性', '远行出行',
+      '迁移变动', '压力解除', '摆脱束缚', '收束心性', '远行出行', '官非诉讼',
     ],
     wealth: [
       '收入增益', '投资置产', '意外之财', '破财损耗', '因财劳碌', '资产变动',
@@ -41,7 +41,10 @@ class EventDomain {
       '文书学业', '考试资格', '技艺才华', '进修拓展', '学途受阻', '破印得用',
       '贵人相助',
     ],
-    health: ['劳神耗气', '旧患复发', '外伤意外', '情志郁结', '身心失调'],
+    health: [
+      '劳神耗气', '旧患复发', '外伤意外', '情志郁结', '身心失调',
+      '手术风险', '寿元关注',
+    ],
   };
 }
 
@@ -111,6 +114,13 @@ class _EventRule {
   /// Restrict to one gender (男命财为妻, 女命官为夫).
   final Gender? gender;
 
+  /// Require the activation to have come from a particular 干支 relationship.
+  ///
+  /// Only for readings that genuinely turn on *how* something was hit —
+  /// 官杀逢刑 is 官非, while 官杀逢冲 is a change of post. Everything else
+  /// matches on [effect] and leaves this null.
+  final InteractionKind? via;
+
   const _EventRule({
     required this.target,
     required this.effect,
@@ -119,6 +129,61 @@ class _EventRule {
     required this.polarity,
     this.stance,
     this.gender,
+    this.via,
+  });
+}
+
+/// One activation a [_ConjunctionRule] requires to be present.
+class _Need {
+  final String target;
+  final String targetKind;
+  final Set<ActivationEffect> effects;
+
+  /// null matches any stance.
+  final int? stance;
+  final Set<InteractionKind>? via;
+
+  const _Need({
+    required this.target,
+    required this.effects,
+    this.targetKind = '十神',
+    this.stance,
+    this.via,
+  });
+
+  bool matches(Activation a) =>
+      a.target == target &&
+      a.targetKind == targetKind &&
+      effects.contains(a.effect) &&
+      (stance == null || a.stance == stance) &&
+      (via == null || (a.via != null && via!.contains(a.via)));
+}
+
+/// An event that only exists when several things happen at once.
+///
+/// Single-target rules cannot say 「日主受克，同时日柱逢刑冲」 — and the
+/// readings that most need saying carefully (手术、寿元关注) are exactly the
+/// ones that classically require a convergence rather than one signal. A
+/// conjunction is scored on its **weakest** member: a chain is no stronger
+/// than its weakest link, and scoring on the strongest would let one loud
+/// activation drag in a claim the rest of the chart does not support.
+class _ConjunctionRule {
+  final List<_Need> needs;
+  final String domain;
+  final String subtype;
+  final EventPolarity polarity;
+
+  /// Multiplies the weakest member's intensity. Conjunctions are rarer and
+  /// their claims are heavier, so they are not automatically stronger than a
+  /// plain rule — this is where that is tuned.
+  final double weight;
+
+  const _ConjunctionRule({
+    required this.needs,
+    required this.domain,
+    required this.subtype,
+    required this.polarity,
+    this.weight = 1.0,
   });
 }
 
@@ -171,6 +236,22 @@ class EventInferenceEngine {
       target: '官杀', effect: ActivationEffect.release,
       domain: EventDomain.marriage, subtype: '感情生变',
       polarity: EventPolarity.mixed, gender: Gender.female,
+    ),
+
+    // 官杀逢刑 —— 官非。刑与冲同为 damage/release，effect 层面分不开，
+    // 故这两条用 via 指名要 刑。官杀为喜时逢刑仍是是非（已有「职场是非」），
+    // 为忌或中性时才断官非。
+    _EventRule(
+      target: '官杀', effect: ActivationEffect.damage, stance: -1,
+      via: InteractionKind.punishment,
+      domain: EventDomain.career, subtype: '官非诉讼',
+      polarity: EventPolarity.adverse,
+    ),
+    _EventRule(
+      target: '官杀', effect: ActivationEffect.damage, stance: 0,
+      via: InteractionKind.punishment,
+      domain: EventDomain.career, subtype: '官非诉讼',
+      polarity: EventPolarity.adverse,
     ),
 
     // ---------------- 神煞 ----------------
@@ -378,6 +459,62 @@ class EventInferenceEngine {
   /// An event needs a substantial relationship behind it — a 大运/流年 level
   /// 冲合刑 or a 十神 arriving transparently — not a 六破 between two hidden
   /// traces. The floor was low enough that faint relations became life events.
+  /// Events that require a convergence rather than one signal.
+  ///
+  /// Both of these are heavy claims, so both are deliberately hard to trigger.
+  /// Neither names an outcome: 手术风险 marks a year where the classical
+  /// 「杀攻身而日柱受刑冲」 pattern converges, and 寿元关注 marks a *range* to
+  /// watch one's health in. Nothing here marks an end of life, and nothing
+  /// here can — the engine has no rule that outputs one.
+  static const List<_ConjunctionRule> _conjunctions = [
+    // 手术风险：七杀/官杀攻身为忌，同时日柱（自身宫）逢冲或刑。
+    _ConjunctionRule(
+      needs: [
+        _Need(
+          target: '官杀',
+          effects: {ActivationEffect.strengthen},
+          stance: -1,
+        ),
+        _Need(
+          target: '日柱',
+          targetKind: '宫位',
+          effects: {ActivationEffect.release, ActivationEffect.damage},
+          via: {InteractionKind.clash, InteractionKind.punishment},
+        ),
+      ],
+      domain: EventDomain.health,
+      subtype: '手术风险',
+      polarity: EventPolarity.adverse,
+      weight: 0.95,
+    ),
+
+    // 寿元关注：在手术风险之上再加一条 —— 印星或比劫（身之根）同时被冲刑。
+    // 三条同年齐备本就罕见，这正是意图：区间提示，不是断点。
+    _ConjunctionRule(
+      needs: [
+        _Need(
+          target: '官杀',
+          effects: {ActivationEffect.strengthen},
+          stance: -1,
+        ),
+        _Need(
+          target: '日柱',
+          targetKind: '宫位',
+          effects: {ActivationEffect.release, ActivationEffect.damage},
+          via: {InteractionKind.clash, InteractionKind.punishment},
+        ),
+        _Need(
+          target: '印星',
+          effects: {ActivationEffect.release, ActivationEffect.damage},
+        ),
+      ],
+      domain: EventDomain.health,
+      subtype: '寿元关注',
+      polarity: EventPolarity.adverse,
+      weight: 0.9,
+    ),
+  ];
+
   static const double _minConfidence = 0.25;
 
   /// Effects that describe a standing relation rather than something
@@ -420,6 +557,7 @@ class EventInferenceEngine {
         if (r.effect != a.effect) continue;
         if (r.stance != null && r.stance != a.stance) continue;
         if (r.gender != null && r.gender != gender) continue;
+        if (r.via != null && r.via != a.via) continue;
 
         // Structural support: an event resting on a 十神 that is not even
         // operative in the natal chart is weaker than one that is.
@@ -462,6 +600,8 @@ class EventInferenceEngine {
       }
     }
 
+    _inferConjunctions(structure, activations, out);
+
     final list = out.values.toList()
       ..sort((a, b) {
         final byConfidence = b.confidence.compareTo(a.confidence);
@@ -470,6 +610,66 @@ class EventInferenceEngine {
         return ('${a.domain}${a.subtype}').compareTo('${b.domain}${b.subtype}');
       });
     return list;
+  }
+
+  /// Add the events that need several activations at once.
+  ///
+  /// Evaluated per layer: a 大运 condition and a 流年 condition are not the
+  /// same year converging, they are two different statements, and treating
+  /// them as one would make the heaviest claims the easiest to trigger.
+  static void _inferConjunctions(
+    NatalStructure structure,
+    List<Activation> activations,
+    Map<String, EventCandidate> out,
+  ) {
+    final byLayer = <TemporalLayer, List<Activation>>{};
+    for (final a in activations) {
+      byLayer.putIfAbsent(a.layer, () => []).add(a);
+    }
+
+    for (final entry in byLayer.entries) {
+      final layer = entry.key;
+      if (!layer.canOriginateEvents) continue;
+
+      for (final rule in _conjunctions) {
+        final matched = <Activation>[];
+        for (final need in rule.needs) {
+          Activation? best;
+          for (final a in entry.value) {
+            if (!need.matches(a)) continue;
+            if (best == null || a.intensity > best.intensity) best = a;
+          }
+          if (best == null) break;
+          matched.add(best);
+        }
+        if (matched.length != rule.needs.length) continue;
+
+        // As strong as the weakest link.
+        final weakest = matched
+            .map((a) => a.intensity)
+            .reduce((a, b) => a < b ? a : b);
+        final confidence = (weakest * rule.weight).clamp(0.0, 1.0);
+        if (confidence < _minConfidence) continue;
+
+        final key = '${rule.domain}|${rule.subtype}';
+        final prior = out[key];
+        if (prior != null && prior.confidence >= confidence) continue;
+
+        out[key] = EventCandidate(
+          domain: rule.domain,
+          subtype: rule.subtype,
+          layer: layer,
+          polarity: rule.polarity,
+          confidence: confidence,
+          basis: [
+            '原局：${structure.pattern.geJu}·${structure.status.label}',
+            for (final a in matched) '${a.layer.label}：${a.mechanism}',
+            '数条同时成立，断为${rule.domain}·${rule.subtype}'
+                '（${rule.polarity.label}）',
+          ],
+        );
+      }
+    }
   }
 
   /// Candidates grouped by the output section they belong to.

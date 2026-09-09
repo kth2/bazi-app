@@ -569,6 +569,25 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
                   ),
                 ),
             ],
+            if (e.kind?.disclaimer != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: kInkBlack.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  e.kind!.disclaimer!,
+                  style: TextStyle(
+                    fontSize: 11,
+                    height: 1.5,
+                    color: kInkBlack.withValues(alpha: 0.75),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Text(
               '标记为规则推演的结果，非既定事实；同一年可有多重可能，仅供参考。',
@@ -663,11 +682,22 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
             ),
             const SizedBox(height: 6),
             Text(
-              '「${EventCatalog.guarded.map((k) => k.label).join('、')}」'
-              '等敏感类别默认不显示，可在右上角设置中开启。',
+              '「${EventCatalog.sensitive.map((k) => k.label).join('、')}」'
+              '同样显示，信或不信由你判断；不想看到可在右上角设置里逐类关掉。',
               style: TextStyle(
                 fontSize: 11,
                 color: kInkBlack.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Standing, not gated behind a switch: the readings are shown by
+            // default now, so the caveat has to be shown by default too.
+            Text(
+              EventCatalog.kGuardedDisclaimer,
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.5,
+                color: kInkBlack.withValues(alpha: 0.6),
               ),
             ),
           ],

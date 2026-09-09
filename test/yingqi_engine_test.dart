@@ -80,14 +80,34 @@ void main() {
       expect(biJie.neutral, isTrue);
     });
 
-    test('activations are deduplicated per (layer, target, effect)', () {
+    test('activations are deduplicated per (layer, target, effect, via)', () {
+      // `via` is part of the key because 刑 and 相绝 both land as `damage`:
+      // merging them would silently drop the 刑 that 官非 needs to exist.
       final ctx = ChartService.temporalContext(chart,
           decade: decade, year: yearOf(2026));
       final acts = LuckActivationEngine.evaluate(structure, ctx);
       final keys = [
-        for (final a in acts) '${a.layer}|${a.targetKind}|${a.target}|${a.effect}'
+        for (final a in acts)
+          '${a.layer}|${a.targetKind}|${a.target}|${a.effect}|${a.via}'
       ];
       expect(keys.length, keys.toSet().length);
+    });
+
+    test('two routes to the same effect stay apart only when 干支 differ', () {
+      // Same relationship reaching the same target twice must still collapse
+      // to one statement, or repetition inflates a window's score.
+      final ctx = ChartService.temporalContext(chart,
+          decade: decade, year: yearOf(2026));
+      final acts = LuckActivationEngine.evaluate(structure, ctx);
+      for (final a in acts) {
+        final twins = acts.where((b) =>
+            b.layer == a.layer &&
+            b.targetKind == a.targetKind &&
+            b.target == a.target &&
+            b.effect == a.effect);
+        expect(twins.map((b) => b.via).toSet().length, twins.length,
+            reason: '${a.target} has two entries sharing one via');
+      }
     });
   });
 

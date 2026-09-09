@@ -39,11 +39,6 @@ class TimelineSettingsNotifier extends StateNotifier<TimelineSettings> {
     state = state.toggled(kindId, on);
     await state.save();
   }
-
-  Future<void> acknowledge() async {
-    state = state.acknowledged();
-    await state.save();
-  }
 }
 
 /// Storage for user-placed events. Overridden in tests with an in-memory
