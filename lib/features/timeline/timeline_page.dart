@@ -8,10 +8,13 @@ import '../../core/analysis/event_inference.dart';
 import '../../core/timeline/event_catalog.dart';
 import '../../core/timeline/life_span.dart';
 import '../../core/timeline/timeline_event.dart';
+import '../../core/timeline/timeline_store.dart';
 import '../../providers/chart_provider.dart';
 import '../../providers/timeline_provider.dart';
 import '../../theme.dart';
+import 'event_editor_sheet.dart';
 import 'event_lanes.dart';
+import 'timeline_settings_sheet.dart';
 import 'timeline_geometry.dart';
 import 'timeline_painter.dart';
 
@@ -39,6 +42,11 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
 
   double? _selectedAge;
   String? _selectedEventId;
+
+  /// The marker currently being dragged, and where the drag started.
+  LifeEvent? _dragging;
+  double _dragStartAge = 0;
+  double _dragOriginStart = 0;
 
   void _fit(double width, LifeSpan span) {
     final existing = _geo;
@@ -78,6 +86,79 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
     return age;
   }
 
+  Future<void> _persist(LifeEvent event) async {
+    final key = ref.read(chartKeyProvider);
+    if (key == null) return;
+    await ref.read(timelineStoreProvider).put(key, StoredEvent(event));
+  }
+
+  /// Deleting a suggested marker leaves a tombstone; deleting one the user
+  /// added simply removes the row. Without the tombstone the scanner, being
+  /// deterministic, hands the marker straight back on the next rescan and the
+  /// delete looks broken.
+  Future<void> _delete(LifeEvent event) async {
+    final key = ref.read(chartKeyProvider);
+    if (key == null) return;
+    final store = ref.read(timelineStoreProvider);
+    if (event.origin == EventOrigin.userAdded) {
+      await store.remove(event.id);
+    } else {
+      await store.put(key, StoredEvent(event, hidden: true));
+    }
+    if (mounted) setState(() => _selectedEventId = null);
+  }
+
+  Future<void> _openEditor({LifeEvent? existing, double? at}) async {
+    final span = ref.read(lifeSpanProvider);
+    if (span == null) return;
+    final result = await showEventEditor(
+      context,
+      span: span,
+      existing: existing,
+      initialAge: at,
+    );
+    switch (result) {
+      case EventSaved(:final event):
+        await _persist(event);
+        if (mounted) setState(() => _selectedEventId = event.id);
+      case EventDeleted():
+        if (existing != null) await _delete(existing);
+      case null:
+        break;
+    }
+  }
+
+  /// Events as drawn, with the marker being dragged shown at its live
+  /// position rather than its saved one.
+  List<LifeEvent> _withDrag(List<LifeEvent> events) {
+    final held = _dragging;
+    if (held == null) return events;
+    return [
+      for (final e in events)
+        if (e.id == held.id) held else e,
+    ];
+  }
+
+  LifeEvent? _markerAt(
+    Offset local,
+    TimelineRows rows,
+    List<LifeEvent> events,
+    EventLanes lanes,
+  ) {
+    final g = _geo;
+    if (g == null) return null;
+    if (local.dy < rows.lanesTop || local.dy >= rows.yearTop) return null;
+    final lane = ((local.dy - rows.lanesTop) / TimelineRows.laneHeight)
+        .floor()
+        .clamp(0, rows.laneCount == 0 ? 0 : rows.laneCount - 1);
+    for (final e in events) {
+      if (lanes[e.id] != lane) continue;
+      final (left, right) = TimelinePainter.boundsFor(g, e);
+      if (local.dx >= left - 3 && local.dx <= right + 3) return e;
+    }
+    return null;
+  }
+
   void _handleTap(
     Offset local,
     LifeSpan span,
@@ -92,21 +173,13 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
     // A tap inside the lane block means the user is pointing at a marker,
     // not at a year. Hit testing uses the painter's own bounds function, so
     // the tappable rectangle is exactly the one that was drawn.
-    if (local.dy >= rows.lanesTop && local.dy < rows.yearTop) {
-      final lane = ((local.dy - rows.lanesTop) / TimelineRows.laneHeight)
-          .floor()
-          .clamp(0, rows.laneCount == 0 ? 0 : rows.laneCount - 1);
-      for (final e in events) {
-        if (lanes[e.id] != lane) continue;
-        final (left, right) = TimelinePainter.boundsFor(g, e);
-        if (local.dx >= left - 3 && local.dx <= right + 3) {
-          setState(() {
-            _selectedEventId = _selectedEventId == e.id ? null : e.id;
-            _selectedAge = e.anchor.startAge;
-          });
-          return;
-        }
-      }
+    final marker = _markerAt(local, rows, events, lanes);
+    if (marker != null) {
+      setState(() {
+        _selectedEventId = _selectedEventId == marker.id ? null : marker.id;
+        _selectedAge = marker.anchor.startAge;
+      });
+      return;
     }
 
     final age = g.ageForX(local.dx);
@@ -125,7 +198,7 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
     }
     final span = LifeSpan.of(result);
     final todayAge = _todayAge(span);
-    final events = ref.watch(suggestedEventsProvider);
+    final events = ref.watch(timelineEventsProvider);
     final lanes = EventLanes.pack(events);
     final rows = TimelineRows(laneCount: lanes.laneCount);
     final selectedEvent = _selectedEventId == null
@@ -136,6 +209,11 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
       appBar: AppBar(
         title: const Text('人生时间线'),
         actions: [
+          IconButton(
+            tooltip: '敏感类别设置',
+            icon: const Icon(Icons.tune),
+            onPressed: () => showTimelineSettingsSheet(context),
+          ),
           IconButton(
             tooltip: '回到今天',
             icon: const Icon(Icons.today_outlined),
@@ -153,8 +231,13 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openEditor(at: _selectedAge),
+        icon: const Icon(Icons.add),
+        label: const Text('添加事件'),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
         children: [
           _buildAxisCard(span, todayAge, rows, events, lanes),
           const SizedBox(height: 12),
@@ -237,12 +320,60 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
                     onScaleEnd: (_) => _gestureStart = null,
                     onTapUp: (d) =>
                         _handleTap(d.localPosition, span, rows, events, lanes),
+                    // Long-press to grab a marker. A plain drag has to stay
+                    // free for panning the axis, so grabbing needs a gesture
+                    // that says "this one" before it says "move it".
+                    onLongPressStart: (d) {
+                      final hit = _markerAt(
+                        d.localPosition,
+                        rows,
+                        events,
+                        lanes,
+                      );
+                      if (hit == null) return;
+                      setState(() {
+                        _dragging = hit;
+                        _selectedEventId = hit.id;
+                        _dragStartAge = g.ageForX(d.localPosition.dx);
+                        _dragOriginStart = hit.anchor.startAge;
+                      });
+                    },
+                    onLongPressMoveUpdate: (d) {
+                      final held = _dragging;
+                      if (held == null) return;
+                      // Snap to whole 虚岁: the axis carries no meaning
+                      // between years, and a marker at 42.37 岁 would
+                      // overstate the resolution of the reasoning under it.
+                      final delta =
+                          (g.ageForX(d.localPosition.dx) - _dragStartAge)
+                              .roundToDouble();
+                      final width = held.anchor.width;
+                      final start = (_dragOriginStart + delta).clamp(
+                        1.0,
+                        span.maxAge - width,
+                      );
+                      if (start == held.anchor.startAge) return;
+                      setState(() {
+                        _dragging = held.copyWith(
+                          anchor: TimelineAnchor(start, start + width),
+                          origin: held.origin == EventOrigin.userAdded
+                              ? EventOrigin.userAdded
+                              : EventOrigin.userMoved,
+                          updatedAt: DateTime.now(),
+                        );
+                      });
+                    },
+                    onLongPressEnd: (_) {
+                      final held = _dragging;
+                      setState(() => _dragging = null);
+                      if (held != null) _persist(held);
+                    },
                     child: CustomPaint(
                       painter: TimelinePainter(
                         span: span,
                         geometry: g,
                         rows: rows,
-                        events: events,
+                        events: _withDrag(events),
                         lanes: lanes,
                         todayAge: todayAge,
                         selectedDecadeIndex: selectedDecade?.index,
@@ -395,6 +526,16 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
                   ),
                 ),
                 IconButton(
+                  tooltip: '编辑',
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  onPressed: () => _openEditor(existing: e),
+                ),
+                IconButton(
+                  tooltip: '删除',
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  onPressed: () => _delete(e),
+                ),
+                IconButton(
                   tooltip: '关闭',
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: () => setState(() => _selectedEventId = null),
@@ -512,8 +653,9 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
             ),
             const SizedBox(height: 8),
             Text(
-              '共 ${events.length} 个推荐标记，按每步大运取最突出的几件；'
-              '颜色分事件类别，深浅分强度，长条为持续区间。点击标记看推理链。',
+              '共 ${events.length} 个标记，推荐部分按每步大运取最突出的几件；'
+              '颜色分事件类别，深浅分强度，长条为持续区间。'
+              '点击看推理链，长按拖动可改年份，浅色圆点表示经本人调整或添加。',
               style: TextStyle(
                 fontSize: 12,
                 color: kInkBlack.withValues(alpha: 0.6),
@@ -521,8 +663,8 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
             ),
             const SizedBox(height: 6),
             Text(
-              '为免造成不必要的担忧，「${EventCatalog.guarded.map((k) => k.label).join('、')}」'
-              '等敏感类别默认不显示，将在后续版本提供开关与免责说明。',
+              '「${EventCatalog.guarded.map((k) => k.label).join('、')}」'
+              '等敏感类别默认不显示，可在右上角设置中开启。',
               style: TextStyle(
                 fontSize: 11,
                 color: kInkBlack.withValues(alpha: 0.5),

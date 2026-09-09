@@ -14,9 +14,7 @@ class TimelineAnchor {
 
   const TimelineAnchor(this.startAge, this.endAge);
 
-  const TimelineAnchor.at(double age)
-      : startAge = age,
-        endAge = age;
+  const TimelineAnchor.at(double age) : startAge = age, endAge = age;
 
   bool get isSpan => endAge > startAge;
   double get width => endAge - startAge;
@@ -30,19 +28,19 @@ class TimelineAnchor {
   Map<String, dynamic> toJson() => {'startAge': startAge, 'endAge': endAge};
 
   factory TimelineAnchor.fromJson(Map<String, dynamic> j) => TimelineAnchor(
-        (j['startAge'] as num).toDouble(),
-        (j['endAge'] as num).toDouble(),
-      );
+    (j['startAge'] as num).toDouble(),
+    (j['endAge'] as num).toDouble(),
+  );
 }
 
 enum EventIntensity { low, medium, high }
 
 extension EventIntensityX on EventIntensity {
   String get label => switch (this) {
-        EventIntensity.low => '轻',
-        EventIntensity.medium => '中',
-        EventIntensity.high => '重',
-      };
+    EventIntensity.low => '轻',
+    EventIntensity.medium => '中',
+    EventIntensity.high => '重',
+  };
 
   /// Bucketed from the engine's confidence. The boundaries are a display
   /// choice, not a claim about the theory — three levels is what a person can
@@ -70,10 +68,10 @@ extension EventOriginX on EventOrigin {
   bool get isUsers => this != EventOrigin.suggested;
 
   String get label => switch (this) {
-        EventOrigin.suggested => '引擎推荐',
-        EventOrigin.userMoved => '推荐后经本人调整',
-        EventOrigin.userAdded => '本人添加',
-      };
+    EventOrigin.suggested => '引擎推荐',
+    EventOrigin.userMoved => '推荐后经本人调整',
+    EventOrigin.userAdded => '本人添加',
+  };
 }
 
 /// One marker on the timeline.
@@ -126,33 +124,51 @@ class LifeEvent {
     EventOrigin? origin,
     String? note,
     DateTime? updatedAt,
-  }) =>
-      LifeEvent(
-        id: id,
-        kindId: kindId,
-        anchor: anchor ?? this.anchor,
-        intensity: intensity ?? this.intensity,
-        origin: origin ?? this.origin,
-        createdAt: createdAt,
-        confidence: confidence,
-        polarity: polarity,
-        basis: basis,
-        note: note ?? this.note,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
+  }) => LifeEvent(
+    id: id,
+    kindId: kindId,
+    anchor: anchor ?? this.anchor,
+    intensity: intensity ?? this.intensity,
+    origin: origin ?? this.origin,
+    createdAt: createdAt,
+    confidence: confidence,
+    polarity: polarity,
+    basis: basis,
+    note: note ?? this.note,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+
+  /// Re-attach the engine's chain to a user-edited copy.
+  LifeEvent withBasis(
+    List<String> basis,
+    EventPolarity? polarity,
+    double? confidence,
+  ) => LifeEvent(
+    id: id,
+    kindId: kindId,
+    anchor: anchor,
+    intensity: intensity,
+    origin: origin,
+    createdAt: createdAt,
+    confidence: confidence ?? this.confidence,
+    polarity: polarity ?? this.polarity,
+    basis: basis,
+    note: note,
+    updatedAt: updatedAt,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'kindId': kindId,
-        'anchor': anchor.toJson(),
-        'intensity': intensity.name,
-        'origin': origin.name,
-        if (confidence != null)
-          'confidence': double.parse(confidence!.toStringAsFixed(2)),
-        if (polarity != null) 'polarity': polarity!.name,
-        if (basis.isNotEmpty) 'basis': basis,
-        if (note.isNotEmpty) 'note': note,
-        'createdAt': createdAt.toIso8601String(),
-        if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
-      };
+    'id': id,
+    'kindId': kindId,
+    'anchor': anchor.toJson(),
+    'intensity': intensity.name,
+    'origin': origin.name,
+    if (confidence != null)
+      'confidence': double.parse(confidence!.toStringAsFixed(2)),
+    if (polarity != null) 'polarity': polarity!.name,
+    if (basis.isNotEmpty) 'basis': basis,
+    if (note.isNotEmpty) 'note': note,
+    'createdAt': createdAt.toIso8601String(),
+    if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+  };
 }
