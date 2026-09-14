@@ -50,6 +50,7 @@ void main() {
             if (trimmed.contains('cases/') ||
                 trimmed.contains('case_record') ||
                 trimmed.contains('cases_db') ||
+                trimmed.contains('case_statistics') ||
                 trimmed.contains('case_provider')) {
               offenders.add('${file.path}: $trimmed');
             }
@@ -73,6 +74,27 @@ void main() {
         expect(dartFilesIn(dir), isNotEmpty, reason: dir);
       }
       expect(dartFilesIn('lib/core/cases'), isNotEmpty);
+    });
+
+    test('accuracy statistics are computed, never consumed', () {
+      // The statistics module is the sharpest form the feedback could take:
+      // a per-domain, per-confidence, per-polarity report on where the engine
+      // is wrong is exactly the input a "tune the weights" change would want.
+      // It may read the journal; nothing in the reasoning path may read it.
+      final stats = File('lib/core/cases/case_statistics.dart');
+      expect(stats.existsSync(), isTrue);
+
+      final offenders = <String>[];
+      for (final dir in engineDirs) {
+        for (final file in dartFilesIn(dir)) {
+          if (file.readAsStringSync().contains('CaseStatistics')) {
+            offenders.add(file.path);
+          }
+        }
+      }
+      expect(offenders, isEmpty,
+          reason: 'the engine must not read its own scorecard:\n'
+              '${offenders.join('\n')}');
     });
 
     test('the case store may depend on the engine, but not the reverse', () {
