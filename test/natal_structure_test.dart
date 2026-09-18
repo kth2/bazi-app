@@ -154,7 +154,7 @@ void main() {
         ChartPattern(
           geJu: ge,
           yongShen: 'x',
-          specialScenarios: const [],
+          scenarios: const [],
           tags: {ge},
         ),
       );

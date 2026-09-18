@@ -1,4 +1,30 @@
+import 'dart:math' as math;
+
 import '../models/chart_result.dart';
+import 'shi_shen_presence.dart';
+
+/// One 特殊场景, with how strong its weakest participant is.
+///
+/// The strength is the point. A scenario used to be a bare label, so
+/// 「官印相生」 read the same whether 印 held 30% of the chart or 3.8% of it —
+/// and the detector emitted it either way, because it only asked whether a
+/// 印 existed *anywhere*, 藏干 included. One report could therefore say
+/// 印星「仅见其气」(3.8%, not operative) and tag the chart 官印相生 in the
+/// same breath, which is exactly the contradiction the narrative layer then
+/// had to talk its way out of.
+class ScenarioHit {
+  final String name;
+
+  /// Share of the chart held by the weakest 十神 group taking part, 0-100.
+  final double strength;
+
+  const ScenarioHit(this.name, this.strength);
+
+  String get label => '$name（${strength.toStringAsFixed(0)}%）';
+
+  Map<String, dynamic> toJson() =>
+      {'name': name, 'strength': double.parse(strength.toStringAsFixed(1))};
+}
 
 /// 格局法 pattern analysis of a chart (子平真诠 method):
 /// 用神专求月令 — the pattern comes from the month branch's main qi,
@@ -6,7 +32,10 @@ import '../models/chart_result.dart';
 class ChartPattern {
   final String geJu; // e.g. 偏印格 / 建禄格 / 阳刃格 / 从财格
   final String yongShen; // description of the chosen 用神
-  final List<String> specialScenarios; // 财破印 / 伤官见官 / 比劫合官 ...
+  /// 特殊场景, strongest first, each gated on its parties actually being
+  /// able to act.
+  final List<ScenarioHit> scenarios;
+
   final Set<String> tags; // feeds example matching
 
   /// 变格（从格）。When true, [geJu] is a 从格 and the whole 取用 logic is
@@ -14,10 +43,13 @@ class ChartPattern {
   /// nothing downstream may treat this chart as a 正格 as well.
   final bool isBianGe;
 
+  /// Names only, strongest first — kept for callers that just want the list.
+  List<String> get specialScenarios => [for (final s in scenarios) s.name];
+
   const ChartPattern({
     required this.geJu,
     required this.yongShen,
-    required this.specialScenarios,
+    required this.scenarios,
     required this.tags,
     this.isBianGe = false,
   });
@@ -60,21 +92,39 @@ class PatternDetector {
     }
 
     // --- 特殊场景 ---
-    final scenarios = <String>[];
+    //
+    // Every scenario below names a *relationship* between two 十神, so both
+    // parties have to be able to take part in one. The old checks asked only
+    // whether a 十神 appeared anywhere in the chart, 藏干 included, with a
+    // threshold of one — which tagged 66% of all charts 官印相生, 38% of them
+    // with 印星 under 10% of the chart's force. A relationship nobody in it
+    // can perform is not a feature of the chart.
+    //
+    // The gate is the engine's own [ShiShenPresence] test, the same one the
+    // structure resolver reports as 「有力可用」, so a report can no longer
+    // call a 十神 unusable and lean on it in the same breath.
+    final scenarios = <ScenarioHit>[];
+    final presence = ShiShenPresenceTable.of(chart);
+
+    double force(String group) => presence[group]?.strength ?? 0;
+
+    /// 能用: 透干通根, or buried but holding real weight.
+    bool usable(String group) => presence[group]?.isOperative ?? false;
+
+    /// 有气: enough to be acted upon, even if it cannot act itself.
+    bool present(String group) => presence[group]?.isStrong ?? false;
+
+    /// Records a scenario at the strength of its weakest participant.
+    void hit(String name, List<String> parties) {
+      scenarios.add(ScenarioHit(
+        name,
+        parties.map(force).reduce(math.min),
+      ));
+    }
 
     int countStem(Set<String> targets) => chart.pillars
         .where((p) => p.ganShiShen != '日主' && targets.contains(p.ganShiShen))
         .length;
-    int countAny(Set<String> targets) {
-      var n = 0;
-      for (final p in chart.pillars) {
-        if (p.ganShiShen != '日主' && targets.contains(p.ganShiShen)) n++;
-        for (final c in p.cangGan) {
-          if (targets.contains(c.shiShen)) n++;
-        }
-      }
-      return n;
-    }
 
     int countMain(Set<String> targets) {
       var n = 0;
@@ -88,48 +138,73 @@ class PatternDetector {
     }
 
     final hasYinGe = geJu == '正印格' || geJu == '偏印格';
-    if (hasYinGe && countAny(const {'正财', '偏财'}) >= 1) {
-      scenarios.add('财破印');
+    // 财破印: the 财 has to be able to do the breaking.
+    if (hasYinGe && usable('财星')) {
+      hit('财破印', ['财星', '印星']);
     }
-    if (countStem(const {'伤官'}) >= 1 && countAny(const {'正官'}) >= 1) {
-      scenarios.add('伤官见官');
+    // 伤官见官: 伤官 must be 透干 (it already was) and the 官 must be there
+    // to be seen.
+    if (countStem(const {'伤官'}) >= 1 && present('官杀')) {
+      hit('伤官见官', ['食伤', '官杀']);
     }
-    if (countMain(const {'正官'}) >= 1 && countMain(const {'七杀'}) >= 1) {
-      scenarios.add('官杀混杂');
+    // 官杀混杂: both must reach 本气 or 透干 — already a real gate — and the
+    // pair together has to amount to something.
+    if (countMain(const {'正官'}) >= 1 &&
+        countMain(const {'七杀'}) >= 1 &&
+        present('官杀')) {
+      hit('官杀混杂', ['官杀']);
     }
+    // 枭神夺食: both 透干 already.
     if (countStem(const {'偏印'}) >= 1 && countStem(const {'食神'}) >= 1) {
-      scenarios.add('枭神夺食');
+      hit('枭神夺食', ['印星', '食伤']);
     }
-    if (countAny(const {'食神'}) >= 1 && countAny(const {'七杀'}) >= 1) {
-      scenarios.add('食神制杀');
+    // 食神制杀: the 食神 does the controlling, so it must be usable.
+    if (usable('食伤') && present('官杀') &&
+        (presence['食神']?.exists ?? false) &&
+        (presence['七杀']?.exists ?? false)) {
+      hit('食神制杀', ['食伤', '官杀']);
     }
     if (_hasBiJieHeGuan(chart)) {
-      scenarios.add('比劫合官');
+      hit('比劫合官', ['比劫', '官杀']);
     }
     if (_hasSanQi(monthPillar)) {
-      scenarios.add('三奇格');
+      hit('三奇格', ['官杀']);
     }
-    if (countAny(const {'正财', '偏财'}) >= 3 &&
-        chart.elementStrength.verdict == '身弱') {
-      scenarios.add('财多身弱');
+    if (countMain(const {'正财', '偏财'}) >= 2 &&
+        chart.elementStrength.verdict == '身弱' &&
+        usable('财星')) {
+      hit('财多身弱', ['财星']);
     }
     if ((geJu == '建禄格' || geJu == '阳刃格' || geJu == '月劫格') &&
-        countStem(const {'正官'}) >= 1) {
-      scenarios.add(geJu == '建禄格' ? '建禄用官' : '月劫用官');
+        countStem(const {'正官'}) >= 1 &&
+        present('官杀')) {
+      hit(geJu == '建禄格' ? '建禄用官' : '月劫用官', ['比劫', '官杀']);
     }
-    if (countAny(const {'正官'}) >= 1 && countAny(const {'正印', '偏印'}) >= 1) {
-      scenarios.add('官印相生');
+    // 官印相生 / 杀印相生: the whole claim is that 官 flows into 印 and 印
+    // into the day master. A 印 that cannot act carries nothing.
+    if (usable('官杀') && usable('印星')) {
+      if (presence['正官']?.exists ?? false) {
+        hit('官印相生', ['官杀', '印星']);
+      }
+      if (presence['七杀']?.exists ?? false) {
+        hit('杀印相生', ['官杀', '印星']);
+      }
     }
-    if (countAny(const {'七杀'}) >= 1 && countAny(const {'正印', '偏印'}) >= 1) {
-      scenarios.add('杀印相生');
+    if (usable('食伤') && usable('财星')) {
+      hit('食伤生财', ['食伤', '财星']);
     }
-    if (countAny(const {'食神', '伤官'}) >= 1 &&
-        countAny(const {'正财', '偏财'}) >= 1) {
-      scenarios.add('食伤生财');
+    // 比劫争财: there has to be something worth taking.
+    if (countStem(const {'比肩', '劫财'}) >= 1 && usable('财星')) {
+      hit('比劫争财', ['比劫', '财星']);
     }
-    if (countStem(const {'比肩', '劫财'}) >= 1 &&
-        countAny(const {'正财', '偏财'}) >= 1) {
-      scenarios.add('比劫争财');
+    // 争合（妒合）: two stems reaching for the same partner at once.
+    //
+    // The chart data already records all three parties of such a 合, but
+    // nothing named it, so a three-way contest could be retold as a clean
+    // two-way 合 — which reverses its meaning: 官星合日主 is 贵气所系,
+    // 官星被比劫争合 is 贵气有人争。
+    for (final contested in _contestedCombos(chart)) {
+      hit('争合·${contested.$1}（两重相合，其应不专）', [contested.$2]);
     }
 
     // Force imbalance that did NOT clear the structural 从格 test is 假从:
@@ -138,18 +213,21 @@ class PatternDetector {
     final support = chart.elementStrength.supportPercent;
     if (congGe == null) {
       if (support <= _jiaCongRuoMaxSupport) {
-        scenarios.add('身弱已极（日主尚有根或有印，假从，仍以正格论）');
+        scenarios.add(ScenarioHit('身弱已极（日主尚有根或有印，假从，仍以正格论）', force('比劫')));
       } else if (support >= _jiaCongWangMinSupport) {
-        scenarios.add('身旺已极（官杀尚有根，假从，仍以正格论）');
+        scenarios.add(ScenarioHit('身旺已极（官杀尚有根，假从，仍以正格论）', force('比劫')));
       }
     }
 
     // 身旺无泄: strong day master with no 食伤 outlet — pent-up qi
     // (胡一鸣: 郁闷之象, health/mood risk).
-    if (chart.elementStrength.verdict == '身强' &&
-        countAny(const {'食神', '伤官'}) == 0) {
-      scenarios.add('身旺无泄');
+    if (chart.elementStrength.verdict == '身强' && !presence['食伤']!.exists) {
+      scenarios.add(ScenarioHit('身旺无泄', force('比劫')));
     }
+
+    // Strongest first. The reader — and the model — should meet the scenario
+    // that actually characterises the chart before the incidental ones.
+    scenarios.sort((a, b) => b.strength.compareTo(a.strength));
 
     final tags = <String>{
       if (congGe != null)
@@ -160,7 +238,11 @@ class PatternDetector {
       ],
       // 假从 notes are prose for the reader, not matchable structure —
       // keeping them out of the tag set stops them polluting example lookup.
-      ...scenarios.where((s) => !s.contains('假从')),
+      // 假从 notes and 争合 are prose for the reader, not matchable
+      // structure — a 争合 label names this chart's own stems and could
+      // never match a corpus tag anyway.
+      for (final s in scenarios)
+        if (!s.name.contains('假从') && !s.name.startsWith('争合')) s.name,
       chart.elementStrength.verdict == '身强'
           ? '身强'
           : chart.elementStrength.verdict == '身弱'
@@ -171,7 +253,7 @@ class PatternDetector {
     return ChartPattern(
       geJu: geJu,
       yongShen: yongShen,
-      specialScenarios: scenarios,
+      scenarios: scenarios,
       tags: tags,
       isBianGe: congGe != null,
     );
@@ -307,6 +389,37 @@ class PatternDetector {
     final hasBiJian =
         chart.pillars.any((p) => p.ganShiShen == '比肩');
     return hasGuanCombiningDay && hasBiJian;
+  }
+
+  /// Stems that two others are simultaneously 合-ing, with the 十神 group of
+  /// the contested stem.
+  ///
+  /// bazi_core reports such a 合 as a single interaction with three parties,
+  /// so the contested stem is simply the one that appears once.
+  static List<(String, String)> _contestedCombos(ChartResult chart) {
+    final out = <(String, String)>[];
+    for (final i in chart.interactions) {
+      if (!i.type.contains('五合') || i.parties.length < 3) continue;
+      final stems = <String, int>{};
+      for (final p in i.parties) {
+        final stem = p.trim().split(RegExp(r'\s+')).last;
+        stems[stem] = (stems[stem] ?? 0) + 1;
+      }
+      final singles = [
+        for (final e in stems.entries)
+          if (e.value == 1) e.key,
+      ];
+      if (singles.length != 1) continue;
+      final stem = singles.first;
+      final pillar = chart.pillars.firstWhere(
+        (p) => p.gan == stem && p.ganShiShen != '日主',
+        orElse: () => chart.pillars.first,
+      );
+      final group = ShiShenPresenceTable.groupOf(pillar.ganShiShen);
+      if (group == null) continue;
+      out.add(('${pillar.ganShiShen}$stem', group));
+    }
+    return out;
   }
 
   /// 三奇格: month branch hidden stems span 财 + 官杀 + 印 all three.
