@@ -228,8 +228,11 @@ class AnalysisPrompt {
         '$g ${s.presence[g]!.level}'
             '(${s.presence[g]!.strength.toStringAsFixed(0)}%)'
     ].join('｜')}');
-    if (s.pattern.specialScenarios.isNotEmpty) {
-      buf.writeln('特殊场景：${s.pattern.specialScenarios.join('、')}');
+    if (s.pattern.scenarios.isNotEmpty) {
+      // With the weakest party's share attached, and strongest first. A bare
+      // list let 官印相生 read the same whether 印 held 30% or 3.8%.
+      buf.writeln('特殊场景（按强弱排序，括号内为最弱一方占全局之力）：'
+          '${s.pattern.scenarios.map((x) => x.label).join('、')}');
     }
     buf.writeln();
   }
