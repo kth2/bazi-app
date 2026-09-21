@@ -78,7 +78,7 @@ void main() {
     expect(find.text('客户A · 2026 流年'), findsOneWidget);
     expect(find.textContaining('己巳 丙子 丙寅 甲午'), findsOneWidget);
     expect(find.textContaining('正官格'), findsOneWidget);
-    expect(find.textContaining('0/1 已回填'), findsOneWidget);
+    expect(find.textContaining('已判定 0/1'), findsOneWidget);
   });
 
   testWidgets('a case whose period has passed reads 待回填', (tester) async {

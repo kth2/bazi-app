@@ -332,8 +332,17 @@ class NatalStructureResolver {
     final geShen = _geShenGroup(pattern.geJu);
     final geShenStrength = geShen == null ? 0.0 : presence[geShen]!.strength;
     final excessive = geShenStrength >= _excessiveStrength;
+    // 禄劫/阳刃 take their 用神 from the stems, so the 相神 depends on *which*
+    // one was taken. The spec's list is the 用神 candidate set for these 格;
+    // consuming it as the 相神 set made the 用神 its own 相神 — 13 of 16 such
+    // charts came out 「用神 甲正官，相神 官杀」, which says nothing, and
+    // 相神 by definition is what *completes* the 用神, not the 用神 itself.
+    final luJie = pattern.luJieYong;
     final candidates = [
-      ...spec.xiangShen,
+      if (luJie != null)
+        ..._luJieXiangShenFor(pattern.geJu, luJie)
+      else
+        ...spec.xiangShen,
       if (excessive) ...spec.xiangShenWhenExcessive,
     ];
     if (excessive) {
@@ -502,6 +511,38 @@ class NatalStructureResolver {
         '建禄格' || '月劫格' || '阳刃格' => '比劫',
         _ => null,
       };
+
+  /// 相神 for a 禄劫 chart, by which 十神 it took as 用神.
+  ///
+  /// 《子平真诠·论建禄月劫》—
+  ///   禄劫用官，透财而不破，或有印以护官；
+  ///   禄劫用财，须带食伤，盖月令为劫而以财作用，二者相克，必以食伤化之；
+  ///   禄劫用杀，必须食伤制之；
+  ///   禄劫用食伤，须带财，方为有出。
+  ///
+  /// Note every row names a group the 用神 does *not* belong to — that is
+  /// what makes it a 相神.
+  static const Map<String, List<String>> _luJieXiangShen = {
+    '正官': ['财星', '印星'],
+    '七杀': ['食伤'],
+    '正财': ['食伤'],
+    '偏财': ['食伤'],
+    '食神': ['财星'],
+    '伤官': ['财星'],
+  };
+
+  /// 阳刃 diverges on one row, and only one.
+  ///
+  /// 刃 is a 凶神 taken 逆用: 官杀 is the instrument that controls it, so when
+  /// 用神 is 官杀 the 相神 is 财 (生官杀，制刃之力更足). 食伤制杀 would take
+  /// the controller away, which is the opposite of what an 阳刃 chart needs —
+  /// so the 禄劫用杀→食伤 row must not be applied here.
+  static List<String> _luJieXiangShenFor(String geJu, String yongShen) {
+    if (geJu == '阳刃格' && (yongShen == '正官' || yongShen == '七杀')) {
+      return const ['财星'];
+    }
+    return _luJieXiangShen[yongShen] ?? const [];
+  }
 
   /// 格神太旺 — past this share the 格 needs draining or checking, not feeding.
   static const double _excessiveStrength = 40;

@@ -220,19 +220,47 @@ void main() {
   });
 
   group('status tracks the review cycle', () {
-    test('pending → awaiting → partial → reviewed', () {
+    test('pending → awaiting → reviewed, on the first real verdict', () {
       var c = newCase();
       expect(c.status(DateTime(2026, 6, 1)), CaseStatus.pending);
       expect(c.status(DateTime(2027, 3, 1)), CaseStatus.awaitingReview);
 
+      // One definite verdict is enough. A reading carries ten-odd
+      // auto-generated claims and a person settles the one or two they cared
+      // about; demanding all of them left every case 部分回填 for ever and
+      // the 待回填 badge permanently lit.
       c = c.copyWith(claims: [
         c.claims.first.copyWith(verdict: ClaimVerdict.hit),
         ...c.claims.skip(1),
       ]);
-      expect(c.status(DateTime(2027, 3, 1)), CaseStatus.partiallyReviewed);
+      expect(c.status(DateTime(2027, 3, 1)), CaseStatus.reviewed);
+      expect(c.scoredCount, 1);
 
       c = c.copyWith(claims: [
         for (final k in c.claims) k.copyWith(verdict: ClaimVerdict.hit),
+      ]);
+      expect(c.status(DateTime(2027, 3, 1)), CaseStatus.reviewed);
+    });
+
+    test('「无法判断」alone is 待判定, not 已回填', () {
+      // Looking at a claim and being unable to tell is not a judgement of
+      // the reading, so it must not clear the case.
+      var c = newCase();
+      c = c.copyWith(claims: [
+        c.claims.first.copyWith(verdict: ClaimVerdict.unclear),
+        ...c.claims.skip(1),
+      ]);
+      expect(c.status(DateTime(2027, 3, 1)), CaseStatus.partiallyReviewed);
+      expect(c.scoredCount, 0);
+      expect(CaseStatus.partiallyReviewed.label, '待判定');
+    });
+
+    test('未应验 clears a case just as 应验 does', () {
+      // A prediction judged wrong has been judged.
+      var c = newCase();
+      c = c.copyWith(claims: [
+        c.claims.first.copyWith(verdict: ClaimVerdict.miss),
+        ...c.claims.skip(1),
       ]);
       expect(c.status(DateTime(2027, 3, 1)), CaseStatus.reviewed);
     });
