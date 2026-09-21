@@ -38,6 +38,13 @@ class ChartPattern {
 
   final Set<String> tags; // feeds example matching
 
+  /// For 建禄/月劫/阳刃 only: which 十神 was taken as 用神 from the stems.
+  ///
+  /// 月令是比劫，不能自用，所以 用神 另取透干之财官食伤。Which one it is
+  /// decides the 相神 — see [NatalStructureResolver] — so the choice has to
+  /// travel with the pattern rather than being buried in a display string.
+  final String? luJieYong;
+
   /// 变格（从格）。When true, [geJu] is a 从格 and the whole 取用 logic is
   /// 顺势 rather than 中和 — the two are mutually exclusive readings, so
   /// nothing downstream may treat this chart as a 正格 as well.
@@ -51,6 +58,7 @@ class ChartPattern {
     required this.yongShen,
     required this.scenarios,
     required this.tags,
+    this.luJieYong,
     this.isBianGe = false,
   });
 
@@ -75,15 +83,16 @@ class PatternDetector {
 
     String geJu;
     String yongShen;
+    String? luJieYong;
     if (congGe != null) {
       geJu = congGe.name;
       yongShen = congGe.yongShen;
     } else if (monthMainShiShen == '比肩') {
       geJu = '建禄格';
-      yongShen = _luJieYongShen(chart);
+      (yongShen, luJieYong) = _luJieYongShen(chart);
     } else if (monthMainShiShen == '劫财') {
       geJu = dayGanIsYang ? '阳刃格' : '月劫格';
-      yongShen = _luJieYongShen(chart);
+      (yongShen, luJieYong) = _luJieYongShen(chart);
     } else {
       geJu = '$monthMainShiShen格';
       final mainGan =
@@ -255,6 +264,7 @@ class PatternDetector {
       yongShen: yongShen,
       scenarios: scenarios,
       tags: tags,
+      luJieYong: luJieYong,
       isBianGe: congGe != null,
     );
   }
@@ -364,7 +374,7 @@ class PatternDetector {
 
   /// 禄劫格 can't use the month itself: 有煞先论煞，有官先论官，
   /// 无官煞再寻食伤财 — from transparent stems.
-  static String _luJieYongShen(ChartResult chart) {
+  static (String, String?) _luJieYongShen(ChartResult chart) {
     String? findStem(String shiShen) {
       for (final p in chart.pillars) {
         if (p.ganShiShen == shiShen) return p.gan;
@@ -374,9 +384,9 @@ class PatternDetector {
 
     for (final s in const ['七杀', '正官', '食神', '伤官', '正财', '偏财']) {
       final gan = findStem(s);
-      if (gan != null) return '月令同气难取用，透干取$gan$s为用';
+      if (gan != null) return ('月令同气难取用，透干取$gan$s为用', s);
     }
-    return '月令同气难取用，干上无官杀食伤财透出，需于藏干中寻用';
+    return ('月令同气难取用，干上无官杀食伤财透出，需于藏干中寻用', null);
   }
 
   /// 比劫争合官星: an official-star stem whose 五合 partner is the day

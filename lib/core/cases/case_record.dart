@@ -213,7 +213,7 @@ extension CaseStatusX on CaseStatus {
   String get label => switch (this) {
         CaseStatus.pending => '进行中',
         CaseStatus.awaitingReview => '待回填',
-        CaseStatus.partiallyReviewed => '部分回填',
+        CaseStatus.partiallyReviewed => '待判定',
         CaseStatus.reviewed => '已回填',
       };
 }
@@ -303,10 +303,24 @@ class CaseRecord {
   bool isDue([DateTime? now]) =>
       reviewDueAt != null && !(now ?? DateTime.now()).isBefore(reviewDueAt!);
 
+  /// Claims the user actually decided — 应验 / 部分应验 / 未应验.
+  int get scoredCount => claims.where((c) => c.verdict.isScorable).length;
+
+  /// Where the case sits in the review cycle.
+  ///
+  /// A case counts as 已回填 once **any** claim carries a definite verdict,
+  /// not once every claim does. A saved reading holds ten or more
+  /// auto-generated claims — 格局, six events, three 应期 windows — and in
+  /// practice a person comes back to settle the one or two they actually
+  /// cared about. Requiring all of them meant every case stayed 部分回填 for
+  /// ever and the 待回填 badge never cleared, which trains you to ignore it.
+  ///
+  /// 「Reviewed」 here therefore means 判过了, not 每一条都填了 — the card
+  /// shows the n/m count beside the label so the difference stays visible.
+  /// The accuracy statistics are unaffected either way: they count claim
+  /// verdicts directly and never consult this status.
   CaseStatus status([DateTime? now]) {
-    if (claims.isNotEmpty && reviewedCount == claims.length) {
-      return CaseStatus.reviewed;
-    }
+    if (scoredCount > 0) return CaseStatus.reviewed;
     if (reviewedCount > 0) return CaseStatus.partiallyReviewed;
     return isDue(now) ? CaseStatus.awaitingReview : CaseStatus.pending;
   }
