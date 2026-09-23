@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'case_record.dart';
+import 'choice_question.dart';
 
 /// Counts of how a set of claims turned out.
 class Tally {
@@ -128,6 +131,122 @@ class TimingTally {
   double? get rate => dated == 0 ? null : inWindow / dated;
 }
 
+/// 95% Wilson score interval for [hits] out of [n].
+///
+/// Used instead of the textbook ±1.96·√(p(1−p)/n) because that one is
+/// nonsense at the sample sizes this journal has — it gives 2/7 an interval
+/// dipping below zero. Null when n is 0.
+(double, double)? wilson95(int hits, int n) {
+  if (n == 0) return null;
+  const z = 1.96;
+  final p = hits / n;
+  final denom = 1 + z * z / n;
+  final centre = (p + z * z / (2 * n)) / denom;
+  final half =
+      z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom;
+  return (math.max(0, centre - half), math.min(1, centre + half));
+}
+
+/// How the two-way 选择题 went, split by which way the AI leaned.
+///
+/// The one comparison a bare 应验率 cannot make. On an A/B question a rate
+/// means nothing until it is set against what a program that *never looked
+/// at the chart* would score:
+///
+/// - [baseline] — always answering the plainer option. The questions people
+///   set are mostly one grand outcome against one ordinary one, and ordinary
+///   is what usually happened; this is the number to beat.
+/// - [noSkillExpected] — picking the brighter option exactly as often as the
+///   AI did, but at random. If the observed rate sits on this, the reading
+///   is a coin with a bias, whatever the rate itself says.
+///
+/// And whether the pick carries information: [rateWhenBrighter] against
+/// [rateWhenPlainer]. A reading with skill is right more often on both sides
+/// than the share of that side among real outcomes.
+///
+/// Only 应验 / 未应验 count. 部分应验 on a two-way question does not say which
+/// option was true.
+class ChoiceBias {
+  final int brighterHit;
+  final int brighterMiss;
+  final int plainerHit;
+  final int plainerMiss;
+
+  const ChoiceBias({
+    this.brighterHit = 0,
+    this.brighterMiss = 0,
+    this.plainerHit = 0,
+    this.plainerMiss = 0,
+  });
+
+  int get n => brighterHit + brighterMiss + plainerHit + plainerMiss;
+  int get hits => brighterHit + plainerHit;
+  int get pickedBrighter => brighterHit + brighterMiss;
+  int get pickedPlainer => plainerHit + plainerMiss;
+
+  /// Questions whose real answer was the brighter option.
+  int get truthBrighter => brighterHit + plainerMiss;
+
+  double? get rate => n == 0 ? null : hits / n;
+  (double, double)? get interval => wilson95(hits, n);
+
+  double? get brighterShare => n == 0 ? null : pickedBrighter / n;
+  double? get truthBrighterShare => n == 0 ? null : truthBrighter / n;
+
+  /// Always answering the plainer option.
+  double? get baseline => n == 0 ? null : (n - truthBrighter) / n;
+
+  /// The AI's own mix of picks, placed at random.
+  double? get noSkillExpected {
+    if (n == 0) return null;
+    final pick = pickedBrighter / n;
+    final truth = truthBrighter / n;
+    return pick * truth + (1 - pick) * (1 - truth);
+  }
+
+  double? get rateWhenBrighter =>
+      pickedBrighter == 0 ? null : brighterHit / pickedBrighter;
+  double? get rateWhenPlainer =>
+      pickedPlainer == 0 ? null : plainerHit / pickedPlainer;
+
+  /// Wrong because it said better than it was.
+  int get optimisticMisses => brighterMiss;
+
+  /// Wrong because it said worse than it was.
+  int get pessimisticMisses => plainerMiss;
+
+  ChoiceBias plus(OptionLean lean, ClaimVerdict v) {
+    if (v != ClaimVerdict.hit && v != ClaimVerdict.miss) return this;
+    final hit = v == ClaimVerdict.hit;
+    return switch (lean) {
+      OptionLean.brighter => ChoiceBias(
+          brighterHit: brighterHit + (hit ? 1 : 0),
+          brighterMiss: brighterMiss + (hit ? 0 : 1),
+          plainerHit: plainerHit,
+          plainerMiss: plainerMiss,
+        ),
+      OptionLean.plainer => ChoiceBias(
+          brighterHit: brighterHit,
+          brighterMiss: brighterMiss,
+          plainerHit: plainerHit + (hit ? 1 : 0),
+          plainerMiss: plainerMiss + (hit ? 0 : 1),
+        ),
+      OptionLean.none => this,
+    };
+  }
+
+  Map<String, dynamic> toJson() => {
+        'brighterHit': brighterHit,
+        'brighterMiss': brighterMiss,
+        'plainerHit': plainerHit,
+        'plainerMiss': plainerMiss,
+        if (baseline != null)
+          'baseline': double.parse(baseline!.toStringAsFixed(3)),
+        if (noSkillExpected != null)
+          'noSkillExpected': double.parse(noSkillExpected!.toStringAsFixed(3)),
+      };
+}
+
 /// Aggregate accuracy across the case journal.
 ///
 /// Read-only, and deliberately so. Nothing under `core/analysis`,
@@ -163,6 +282,16 @@ class CaseStatistics {
   final List<CalibrationBucket> calibration;
   final TimingTally timing;
 
+  /// Two-way 选择题, all versions together.
+  final ChoiceBias choice;
+
+  /// The same per engine version — the lean is a property of the version
+  /// that answered, and it has swung from one side to the other before.
+  final Map<int, ChoiceBias> choiceByVersion;
+
+  /// The same per question kind.
+  final Map<QuestionTopic, ChoiceBias> choiceByTopic;
+
   const CaseStatistics({
     required this.cases,
     required this.reviewedCases,
@@ -175,6 +304,9 @@ class CaseStatistics {
     required this.byEngineVersion,
     required this.calibration,
     required this.timing,
+    this.choice = const ChoiceBias(),
+    this.choiceByVersion = const {},
+    this.choiceByTopic = const {},
   });
 
   /// Below this a percentage is noise dressed as a measurement, and the UI
@@ -206,6 +338,9 @@ class CaseStatistics {
     final confidences = <int, List<double>>{};
     final bandTally = <int, Tally>{};
     var timing = const TimingTally();
+    var choice = const ChoiceBias();
+    final choiceByVersion = <int, ChoiceBias>{};
+    final choiceByTopic = <QuestionTopic, ChoiceBias>{};
 
     var reviewedCases = 0;
     var dueCases = 0;
@@ -251,6 +386,21 @@ class CaseStatistics {
           }
         }
 
+        if (claim.kind == ClaimKind.qa) {
+          final lean = claim.lean;
+          if (lean != OptionLean.none) {
+            choice = choice.plus(lean, v);
+            final version = record.engineVersion;
+            choiceByVersion[version] =
+                (choiceByVersion[version] ?? const ChoiceBias()).plus(lean, v);
+            final topic = claim.choice?.topic;
+            if (topic != null) {
+              choiceByTopic[topic] =
+                  (choiceByTopic[topic] ?? const ChoiceBias()).plus(lean, v);
+            }
+          }
+        }
+
         if (claim.kind == ClaimKind.yingQi && v.isScorable) {
           final landed = claim.landedInWindow;
           timing = TimingTally(
@@ -289,6 +439,9 @@ class CaseStatistics {
       byEngineVersion: byVersion,
       calibration: calibration,
       timing: timing,
+      choice: choice,
+      choiceByVersion: choiceByVersion,
+      choiceByTopic: choiceByTopic,
     );
   }
 
@@ -362,6 +515,11 @@ class CaseStatistics {
           'inWindow': timing.inWindow,
           'outOfWindow': timing.outOfWindow,
           'undated': timing.undated,
+        },
+        'choice': choice.toJson(),
+        'choiceByVersion': {
+          for (final e in choiceByVersion.entries)
+            e.key.toString(): e.value.toJson(),
         },
       };
 }

@@ -19,7 +19,7 @@ class AnalysisPrompt {
   static const String kHuYimingNotes = '''
 【命理知识要点（胡一鸣法）】
 - 判旺弱定格局：旺者有克泄、弱者有生扶为正格，取中庸之道；克泄/生扶皆无用则为变格（从格），顺势行舟——弱让它更弱、旺让它更旺，反之大凶。
-- 有钱两条件：有来源（食伤）且守得住（财不被比劫克尽）。食伤生财为付出型赚钱：身旺轻松、身弱辛苦劳累；伤官生财敢想敢干放得开，食神生财含蓄有顾忌。官印相生为被动型赚钱，上班管理一流，创业多倒（食伤克官不善找财源）。财生官、官生印者，借官位地位职位赚钱；身旺食伤生财又财生官者为老板创业之命。
+- 有钱两条件：有来源（食伤）且守得住（财不被比劫克尽）。食伤生财为付出型赚钱：身旺轻松、身弱辛苦劳累；伤官生财敢想敢干放得开，食神生财含蓄有顾忌。官印相生为被动型赚钱，上班管理一流，创业多倒（食伤克官不善找财源）。财生官、官生印者，借官位地位职位赚钱；身旺食伤生财又财生官者为老板创业之命。以上言赚钱方式与职业取向，不言财富多寡：「老板命」不等于「千万身家」，财富层次仍看格局清浊与岁运。
 - 比劫分财：财来财去，到头一场空，男命于妻不利；身旺逢官运克去比劫，财复活为意外之财。身旺食伤受印克则郁闷，逢财运财破印、食伤复活为意外收获。身弱财破印（无食伤）主破财，要钱不要命。
 - 婚恋：男看财星、以食伤为动力；女看官杀、以财为动力。有星无动力或有动力无星者，逢引动之运年发动。夫妻宫（日支）坐食伤者眼光高、所遇皆看不起。男食伤生财者旺妻待妻好；女财生官者旺夫；官克日主者其夫待她不佳。食伤合官杀者易怀孕、恋地位。
 - 健康（干支受伤对应之病）：甲胆/骨折/秃头，乙肝/筋/风湿，丙小肠/眼疾，丁心脏/供血不足，戊胃/肌肉/妇科瘤，己脾/糖尿病，庚大肠/痔疮，辛肺/呼吸道/皮肤过敏，壬癸肾膀胱/血液/中风高血压/内分泌/耳鸣/子宫。命局关键「通关之神」受伤时连锁而病（如金伤则先痔疮后肾病）；身旺无泄者气机郁滞、情绪压抑成疾。天干地支同时受克，轻则意外官非，重则大凶。
@@ -96,12 +96,19 @@ class AnalysisPrompt {
     buf.writeln('请以命理师身份，专门针对上述问题作答：');
     buf.writeln('- 依上方已定的格局、用神忌神与岁运引动推演作答，给出明确判断，'
         '不要含糊两可');
-    buf.writeln('- 若问题给出多个选项，必须先明确指出最可能的一项（如「答案：第X项」），'
+    buf.writeln('- 若问题给出多个选项，第一行写「答案：X」（X 为单个选项字母），'
         '再逐条说明各选项的可能性高低及命理依据');
-    buf.writeln('- 选项题不得默认取较差、较低、较悲观的一项。'
-        '富贵与贫贱、吉与凶，一律以上方【引擎净评估】与具体干支作用为准：'
-        '命局显吉就选吉的一项，显凶才选凶的一项。'
+    buf.writeln('- 选项题既不默认取较差的一项，也不默认取较好的一项：'
+        '以具体干支对用神、相神、忌神的作用定取舍。'
         '若两项皆有理，说明何者更重并给出取舍依据');
+    buf.writeln('- 层次、财富、职级类选项（身家过亿、千万、年入百万、厅处级、大老板'
+        '对温饱、打工、普通职员）：大富大贵在人群中是少数。'
+        '选富贵一项，须格局成格而清纯、用神有力、相神到位，'
+        '且所问时段岁运扶助格局，并逐条写出这些证据；'
+        '仅凭「破而有救」「有财星」「食伤生财」「官印相生」一类标签，'
+        '不足以断大富大贵，证据不足时取平常一项');
+    buf.writeln('- 流年吉凶、破财发财类选项没有先验偏向，'
+        '只看该年干支落在用神、相神还是忌神上');
     buf.writeln('- 若问题涉及时间，直接引用上方【应期】所排的窗口，'
         '不要另行推算或指定其他日期');
     buf.writeln('- 若上方推演不足以回答该问题，坦诚说明并给出倾向性判断，不可编造');
@@ -140,20 +147,27 @@ class AnalysisPrompt {
     _writeAssessment(buf, report);
   }
 
-  /// The engine's own net 吉凶, stated last so it is the final thing read.
+  /// The engine's own net 吉凶 count, shown as a reference and nothing more.
   ///
-  /// The narrative layer was previously free to contradict the deterministic
-  /// one without saying so, and did: on charts whose candidates were entirely
-  /// 吉 it still answered 破财. It may still disagree — but it has to declare
-  /// that it is disagreeing, and say on what 干支 grounds.
+  /// It used to be a binding — 「结论须与此一致」 — added to stop the model
+  /// answering 破财 on charts whose candidates were all 吉. That removed the
+  /// pessimism, but replaced it with whatever lean the count had: at engine
+  /// v10 the model picked the brighter option on six A/B questions out of six
+  /// and five were wrong. Replayed against 55 judged A/B questions
+  /// (`test/case_replay_test.dart`), the count agreed with what happened 53%
+  /// of the time, 95% interval 40–65%. A number with no demonstrated
+  /// predictive power cannot be allowed to decide answers; the pessimism is
+  /// guarded instead by the symmetric rule in [buildCustom] and by keeping
+  /// corpus outcomes out of the prompt.
   static void _writeAssessment(StringBuffer buf, ReasoningReport report) {
     final a = report.assessment;
     if (!a.hasSignal) return;
-    buf.writeln('【引擎净评估——结论须与此一致】');
+    buf.writeln('【引擎净评估——仅供参考】');
     buf.writeln(a.summary);
-    buf.writeln('这是上方推演逐条累加的结果，不是印象。你的结论应与此倾向相符。');
-    buf.writeln('若你判断与此相反，必须明写「与引擎净评估相反」并指出依据哪一条'
-        '干支作用推翻它；不得在没有具体依据的情况下，一律取较坏的解释。');
+    buf.writeln('这是上方事件候选与应期窗口的吉凶计数，不是对此事结果的判断；'
+        '拿已知结果的案例回放，它与实际的一致率与随机无异。'
+        '请以具体干支对用神、相神、忌神的作用为准，'
+        '不要因计数偏吉就取好的一项，也不要因计数偏凶就取差的一项。');
     buf.writeln();
   }
 

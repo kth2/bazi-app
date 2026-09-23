@@ -212,17 +212,21 @@ void main() {
       expect(prompt, contains('不代表命造多凶'));
     });
 
-    test('the engine states its net verdict and binds the answer to it',
+    test('the engine net count is shown as a reference, not a binding',
         () async {
+      // The binding was added against pessimism and turned into a lean of
+      // its own: replayed against judged A/B questions the count agreed with
+      // the outcome about half the time, so it may not decide answers.
       final decade = chart1990.decades.first;
       final year = ChartService.flowYearsOf(chart1990, decade).first;
       final prompt = await promptFor(decade: decade, year: year);
 
-      expect(prompt, contains('【引擎净评估——结论须与此一致】'));
+      expect(prompt, contains('【引擎净评估——仅供参考】'));
       expect(prompt, contains('综合倾向：'));
-      // Disagreement is allowed, but must be declared and grounded.
-      expect(prompt, contains('与引擎净评估相反'));
-      expect(prompt, contains('不得在没有具体依据的情况下，一律取较坏的解释'));
+      expect(prompt, isNot(contains('结论须与此一致')));
+      // Warned off in both directions, not only away from gloom.
+      expect(prompt, contains('不要因计数偏吉就取好的一项'));
+      expect(prompt, contains('也不要因计数偏凶就取差的一项'));
     });
 
     test('the four-category prompt forbids reflexive gloom', () async {
@@ -357,7 +361,16 @@ void main() {
       expect(prompt, contains('流年 ${year.year}年'));
       expect(prompt, contains('【用户问题】'));
       expect(prompt, contains(question));
-      expect(prompt, contains('必须先明确指出最可能的一项'));
+      // A single letter on the first line, so the case journal can read the
+      // pick and tell which way it leaned.
+      expect(prompt, contains('第一行写「答案：X」'));
+      // Symmetric: neither side is the default.
+      expect(prompt, contains('既不默认取较差的一项，也不默认取较好的一项'));
+      // 层次 questions carry a base rate; 流年吉凶 does not.
+      expect(prompt, contains('大富大贵在人群中是少数'));
+      expect(prompt, contains('流年吉凶、破财发财类选项没有先验偏向'));
+      // 老板命 is a way of earning, not an amount.
+      expect(prompt, contains('「老板命」不等于「千万身家」'));
       // Timing must be quoted from the engine, not recomputed.
       expect(prompt, contains('不要另行推算或指定其他日期'));
       // Not the 4-category format.

@@ -6,6 +6,7 @@ import '../analysis/reasoning_report.dart';
 import '../analysis/temporal_context.dart';
 import '../analysis/yingqi_engine.dart';
 import '../models/birth_input.dart';
+import 'choice_question.dart';
 
 /// What kind of statement a recorded claim is.
 enum ClaimKind {
@@ -114,6 +115,11 @@ class PredictedClaim {
   /// checked against the predicted window rather than guessed at.
   final DateTime? actualDate;
 
+  /// For a 问答 claim: whether the AI picked the brighter or the plainer of
+  /// the options, when the user has said so. Null means "read it from the
+  /// text" — see [lean].
+  final OptionLean? leanOverride;
+
   const PredictedClaim({
     required this.id,
     required this.kind,
@@ -126,6 +132,7 @@ class PredictedClaim {
     this.verdict = ClaimVerdict.unverified,
     this.note = '',
     this.actualDate,
+    this.leanOverride,
   });
 
   PredictedClaim copyWith({
@@ -133,6 +140,8 @@ class PredictedClaim {
     String? note,
     DateTime? actualDate,
     bool clearActualDate = false,
+    OptionLean? leanOverride,
+    bool clearLeanOverride = false,
   }) =>
       PredictedClaim(
         id: id,
@@ -146,7 +155,25 @@ class PredictedClaim {
         verdict: verdict ?? this.verdict,
         note: note ?? this.note,
         actualDate: clearActualDate ? null : (actualDate ?? this.actualDate),
+        leanOverride: clearLeanOverride
+            ? null
+            : (leanOverride ?? this.leanOverride),
       );
+
+  /// The question read as a two-way choice, when it is one.
+  ChoiceReading? get choice =>
+      kind == ClaimKind.qa ? ChoiceQuestion.read(title, detail) : null;
+
+  /// Which way the AI's pick leaned — the user's setting if there is one,
+  /// otherwise what the text says. Always [OptionLean.none] for non-问答
+  /// claims.
+  OptionLean get lean {
+    if (kind != ClaimKind.qa) return OptionLean.none;
+    return leanOverride ?? choice?.lean ?? OptionLean.none;
+  }
+
+  /// True when [lean] came from reading the text rather than from the user.
+  bool get leanIsInferred => leanOverride == null;
 
   /// Whether [actualDate] fell inside the predicted window. Null when either
   /// side is unknown.
@@ -173,6 +200,7 @@ class PredictedClaim {
         'verdict': verdict.name,
         'note': note,
         if (actualDate != null) 'actualDate': actualDate!.toIso8601String(),
+        if (leanOverride != null) 'lean': leanOverride!.name,
       };
 
   factory PredictedClaim.fromJson(Map<String, dynamic> json) => PredictedClaim(
@@ -188,6 +216,10 @@ class PredictedClaim {
             json['verdict'] as String? ?? ClaimVerdict.unverified.name),
         note: json['note'] as String? ?? '',
         actualDate: _parseDate(json['actualDate']),
+        leanOverride: switch (json['lean']) {
+          final String name => OptionLean.values.asNameMap()[name],
+          _ => null,
+        },
       );
 
   static DateTime? _parseDate(Object? v) =>
