@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:bazi_app/core/cases/case_record.dart';
+import 'package:bazi_app/core/cases/choice_question.dart';
 import 'package:bazi_app/core/cases/cases_db.dart';
 import 'package:bazi_app/core/models/birth_input.dart';
 import 'package:bazi_app/features/cases/case_detail_page.dart';
@@ -203,6 +204,42 @@ void main() {
       expect(find.textContaining('答案：第1项'), findsOneWidget);
       // A recorded answer is judged like any other claim.
       expect(find.text('应验'), findsWidgets);
+    });
+
+    testWidgets('an A/B answer shows which way it leaned, and can be corrected',
+        (tester) async {
+      tester.view.physicalSize = const Size(320 * 3, 1800 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      final store = FakeCaseStore([
+        record(claims: [
+          CaseRecord.qaClaim('A 庚寅年破财\nB 庚寅年发财', '答案：A 庚寅年破财'),
+        ])
+      ]);
+      await tester.pumpWidget(wrapDetail(store));
+      await tester.pump();
+
+      expect(find.text('AI 所选（自动识别）'), findsOneWidget);
+      final plainer = find.widgetWithText(ChoiceChip, '较平一项');
+      expect(tester.widget<ChoiceChip>(plainer).selected, isTrue);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('较好一项'));
+      await tester.pump();
+      expect(find.text('AI 所选（已手动设定）'), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('保存回填'));
+      await tester.pump();
+      await tester.pump();
+      expect(store.items['c1']!.claims.single.leanOverride,
+          OptionLean.brighter);
+
+      // Choosing what the text says again clears the override.
+      await tester.tap(find.text('较平一项'));
+      await tester.pump();
+      expect(find.text('AI 所选（自动识别）'), findsOneWidget);
     });
 
     testWidgets('a long answer collapses behind 展开全文', (tester) async {

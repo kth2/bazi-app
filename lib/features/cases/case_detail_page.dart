@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cases/case_export.dart';
 import '../../core/cases/case_record.dart';
+import '../../core/cases/choice_question.dart';
 import '../../providers/case_provider.dart';
 import '../../theme.dart';
 
@@ -72,6 +73,55 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
       );
       _dirty = true;
     });
+  }
+
+  /// Tapping the chip the text already implies clears the override, so the
+  /// claim goes back to following the text.
+  void _setLean(PredictedClaim claim, OptionLean lean) {
+    final r = _record!;
+    final inferred = claim.choice?.lean ?? OptionLean.none;
+    setState(() {
+      _record = r.copyWith(
+        claims: [
+          for (final c in r.claims)
+            if (c.id != claim.id)
+              c
+            else if (lean == inferred)
+              c.copyWith(clearLeanOverride: true)
+            else
+              c.copyWith(leanOverride: lean),
+        ],
+      );
+      _dirty = true;
+    });
+  }
+
+  /// Which way the AI's pick leaned, read from the text and correctable.
+  ///
+  /// Feeds the 选择题 baseline in 准确率统计. Shown on every 问答 claim so a
+  /// wrong automatic reading is visible where it can be fixed.
+  Widget _leanRow(PredictedClaim claim) {
+    final lean = claim.lean;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(
+        spacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            claim.leanIsInferred ? 'AI 所选（自动识别）' : 'AI 所选（已手动设定）',
+            style: const TextStyle(fontSize: 11, color: Colors.black54),
+          ),
+          for (final l in OptionLean.values)
+            ChoiceChip(
+              label: Text(l.label, style: const TextStyle(fontSize: 11)),
+              visualDensity: VisualDensity.compact,
+              selected: lean == l,
+              onSelected: (_) => _setLean(claim, l),
+            ),
+        ],
+      ),
+    );
   }
 
   Future<void> _pickActualDate(PredictedClaim claim) async {
@@ -391,6 +441,7 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
             if (isQa) ...[
               const SizedBox(height: 8),
               _qaBody(claim),
+              _leanRow(claim),
             ] else if (claim.detail.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(claim.detail,

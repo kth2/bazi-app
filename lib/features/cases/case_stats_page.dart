@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cases/case_record.dart';
 import '../../core/cases/case_statistics.dart';
+import '../../core/cases/choice_question.dart';
 import '../../providers/case_provider.dart';
 import '../../theme.dart';
 
@@ -43,6 +44,10 @@ class CaseStatsPage extends ConsumerWidget {
             padding: const EdgeInsets.all(12),
             children: [
               _HeadlineCard(stats: stats),
+              if (stats.choice.n > 0) ...[
+                const SizedBox(height: 12),
+                _ChoiceBiasCard(stats: stats),
+              ],
               const SizedBox(height: 12),
               _CoverageCard(stats: stats),
               if (stats.hasCalibration) ...[
@@ -217,6 +222,154 @@ class _HeadlineCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _pct(double? v) => v == null ? '—' : '${(v * 100).round()}%';
+
+/// The A/B questions set against a reader who never looked at the chart.
+///
+/// This card exists because the headline rate moved with the AI's lean and
+/// not with the charts: 58% while it picked the plainer option almost every
+/// time, 17% while it picked the brighter one every time. Without the
+/// baseline beside it, a change that only swings the lean looks like a
+/// change in accuracy.
+class _ChoiceBiasCard extends StatelessWidget {
+  final CaseStatistics stats;
+
+  const _ChoiceBiasCard({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = stats.choice;
+    final enough = c.n >= CaseStatistics.kMinSample;
+    final ci = c.interval;
+    final baseline = c.baseline!;
+    final rate = c.rate!;
+    final String verdict;
+    if (!enough) {
+      verdict = '题数不足 ${CaseStatistics.kMinSample}，先看条数。';
+    } else if (rate <= baseline) {
+      verdict = '还没有跑赢「永远选较平一项」。在这之前，'
+          '命中率的高低说明的是偏向，不是看盘的本事。';
+    } else if (ci != null && ci.$1 > baseline) {
+      verdict = '命中率的 95% 区间下限已高于基线——这是看盘有效的证据。';
+    } else {
+      verdict = '高于基线，但仍在误差范围内，需要更多题目。';
+    }
+    final muted = kInkBlack.withValues(alpha: 0.65);
+
+    Widget line(String label, String value, {bool strong = false}) => Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(label,
+                    style: TextStyle(fontSize: 13, color: muted)),
+              ),
+              const SizedBox(width: 8),
+              // Flexible so the 95% interval wraps on a narrow screen
+              // instead of pushing off the card.
+              Flexible(
+                child: Text(value,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: strong ? FontWeight.w700 : FontWeight.w500,
+                      color: strong ? kObservedColor : kInkBlack,
+                    )),
+              ),
+            ],
+          ),
+        );
+
+    final versions = stats.choiceByVersion.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('选择题：和不看命盘比',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(
+              '二选一的题，一项好一项平。只算「应验/未应验」，'
+              '「部分应验」说明不了哪一项是真的。',
+              style: TextStyle(fontSize: 12, height: 1.5, color: muted),
+            ),
+            const SizedBox(height: 10),
+            line(
+              'AI 命中',
+              enough && ci != null
+                  ? '${c.hits}/${c.n} = ${_pct(rate)}'
+                      '（95% 区间 ${_pct(ci.$1)}–${_pct(ci.$2)}）'
+                  : '${c.hits}/${c.n}',
+              strong: true,
+            ),
+            line('对照：永远选较平一项', enough ? _pct(baseline) : '—'),
+            line('对照：按 AI 的偏向随机选',
+                enough ? _pct(c.noSkillExpected) : '—'),
+            const SizedBox(height: 4),
+            Text(verdict,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: rate <= baseline && enough
+                      ? kPrimaryRed.withValues(alpha: 0.85)
+                      : muted,
+                )),
+            const Divider(height: 20),
+            line('AI 选较好一项的比例', '${c.pickedBrighter}/${c.n}'),
+            line('实际是较好一项的比例', '${c.truthBrighter}/${c.n}'),
+            line('选较好一项时的命中',
+                '${c.brighterHit}/${c.pickedBrighter}'),
+            line('选较平一项时的命中', '${c.plainerHit}/${c.pickedPlainer}'),
+            line('错在说好了 / 错在说差了',
+                '${c.optimisticMisses} / ${c.pessimisticMisses}'),
+            const SizedBox(height: 2),
+            Text(
+              '两个比例差得越远，偏向越重。两行「命中」都明显高于'
+              '实际比例，才说明 AI 的选择带着命盘里的信息。',
+              style: TextStyle(fontSize: 11, height: 1.5, color: muted),
+            ),
+            if (versions.length > 1 || stats.choiceByTopic.length > 1)
+              const Divider(height: 20),
+            if (versions.length > 1)
+              for (final v in versions)
+                _choiceRow('v$v', stats.choiceByVersion[v]!, muted),
+            if (versions.length > 1 && stats.choiceByTopic.length > 1)
+              const SizedBox(height: 6),
+            if (stats.choiceByTopic.length > 1)
+              for (final t in QuestionTopic.values)
+                if (stats.choiceByTopic[t] != null)
+                  _choiceRow(t.label, stats.choiceByTopic[t]!, muted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _choiceRow(String label, ChoiceBias b, Color muted) => Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 72,
+              child: Text(label, style: const TextStyle(fontSize: 12)),
+            ),
+            Expanded(
+              child: Text(
+                '命中 ${b.hits}/${b.n} · 选较好 ${b.pickedBrighter}/${b.n}'
+                ' · 实为较好 ${b.truthBrighter}/${b.n}',
+                style: TextStyle(fontSize: 12, color: muted),
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 /// Where the denominator came from — the honesty check on the whole number.
@@ -706,8 +859,8 @@ class _CaveatCard extends StatelessWidget {
           '这是这类统计最大的误差来源，没有办法从程序里修掉。',
       '只有「能判断」的条目进分母。「无法判断」被排除而不是记为错，'
           '这对准确率是有利的。',
-      '没有基准率对照。「事业会有变动」这种话本身命中率就很高，'
-          '高分未必来自推断有效。要判断这一点，得和一个随便说的对照组比。',
+      '只有选择题有对照（见「选择题：和不看命盘比」），其余条目没有基准率对照。'
+          '「事业会有变动」这种话本身命中率就很高，高分未必来自推断有效。',
       '「部分应验」记半分，是个宽松约定。所以严格值也一并给出。',
       '这些数字不会回流到引擎里。理论固定，推演结构化；'
           '历史结果是拿来给人判断理论的，不是拿来让程序改自己的。',
