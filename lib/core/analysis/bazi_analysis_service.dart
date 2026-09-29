@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/ai_service.dart';
 import '../models/chart_result.dart';
+import '../rules/custom_rules.dart';
 import '../rules/rule.dart';
 import 'analysis_prompt.dart';
 import 'example_repository.dart';
@@ -94,7 +95,7 @@ class BaziAnalysisService {
   /// Cached AI text is the *output* of a specific engine version, so a bump
   /// must invalidate it — otherwise an engine improvement is invisible to
   /// anyone who already ran the analysis once.
-  static const int kEngineVersion = 11;
+  static const int kEngineVersion = 12;
 
   static String _cachePrefix(String kind) => 'ai_${kind}_v${kEngineVersion}_';
 
@@ -106,7 +107,15 @@ class BaziAnalysisService {
   final ExampleRepository examples;
   final AiService ai;
 
-  BaziAnalysisService({required this.examples, required this.ai});
+  /// Adopted 条例. Their revision is part of every cache key, so adopting or
+  /// retiring one is never hidden behind an answer cached under the old set.
+  final CustomRuleStore customRules;
+
+  BaziAnalysisService({
+    required this.examples,
+    required this.ai,
+    CustomRuleStore? customRules,
+  }) : customRules = customRules ?? CustomRuleStore();
 
   /// Drops entries written by a different engine version (including the
   /// original unversioned keys). Runs once per process.
@@ -194,7 +203,9 @@ class BaziAnalysisService {
     final scope = scopeLabel(decade: decade, year: year, month: month, day: day);
 
     final normalizedQ = question.trim();
-    final cacheKey = '${_cachePrefix('qa')}${chart.baziString}_'
+    final ruleSet = await customRules.load();
+    final cacheKey = '${_cachePrefix('qa')}r${ruleSet.revision}_'
+        '${chart.baziString}_'
         '${chart.input.gender.name}_${scope}_${normalizedQ.hashCode}';
     final prefs = await SharedPreferences.getInstance();
     await _purgeStaleCaches(prefs);
@@ -211,6 +222,7 @@ class BaziAnalysisService {
       report: report,
       examples: similar,
       question: normalizedQ,
+      customRules: ruleSet.promptLines,
     );
 
     final settings = await AiSettings.load();
@@ -236,8 +248,9 @@ class BaziAnalysisService {
   }) async {
     final scope = scopeLabel(decade: decade, year: year, month: month, day: day);
 
-    final cacheKey = '${_cachePrefix('cache')}${chart.baziString}_'
-        '${chart.input.gender.name}_$scope';
+    final ruleSet = await customRules.load();
+    final cacheKey = '${_cachePrefix('cache')}r${ruleSet.revision}_'
+        '${chart.baziString}_${chart.input.gender.name}_$scope';
     final prefs = await SharedPreferences.getInstance();
     await _purgeStaleCaches(prefs);
     final cached = prefs.getString(cacheKey);
@@ -253,6 +266,7 @@ class BaziAnalysisService {
     final prompt = AnalysisPrompt.build(
       report: report,
       examples: similar,
+      customRules: ruleSet.promptLines,
     );
 
     final settings = await AiSettings.load();
@@ -315,13 +329,13 @@ class BaziAnalysisService {
   static Future<void> clearCacheFor(ChartResult chart) async {
     final prefs = await SharedPreferences.getInstance();
     final bazi = chart.baziString;
-    final prefixes = [
-      '${_cachePrefix('cache')}${bazi}_',
-      '${_cachePrefix('qa')}${bazi}_',
-    ];
+    // Keys carry the 条例 revision between prefix and chart (r3_甲子…), so
+    // match on the prefix and the chart separately — every revision's copy
+    // of this chart goes.
+    final prefixes = [_cachePrefix('cache'), _cachePrefix('qa')];
     for (final k in prefs
         .getKeys()
-        .where((k) => prefixes.any(k.startsWith))
+        .where((k) => prefixes.any(k.startsWith) && k.contains('_${bazi}_'))
         .toList()) {
       await prefs.remove(k);
     }

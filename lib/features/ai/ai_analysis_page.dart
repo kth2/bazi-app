@@ -9,6 +9,7 @@ import '../../providers/ai_provider.dart';
 import '../../providers/case_provider.dart';
 import '../../providers/analysis_provider.dart';
 import '../../providers/chart_provider.dart';
+import '../../providers/custom_rules_provider.dart';
 import '../../services/ai_service.dart';
 import '../../theme.dart';
 import '../cases/case_detail_page.dart';
@@ -150,11 +151,21 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
     setState(() => _savingCase = true);
     try {
       final repo = ref.read(caseRepositoryProvider);
-      final existing = await repo.findExisting(
+      final ruleRevision =
+          (await ref.read(customRuleStoreProvider).load()).revision;
+      final found = await repo.findExisting(
         baziString: chart.baziString,
         gender: chart.input.gender,
         scopeLabel: _scopeTitle,
       );
+      // Merge only into a case made by the same program. An answer given
+      // under engine v12 or 条例 revision 3 appended to a v11 case would be
+      // scored as v11's — the per-version statistics depend on this.
+      final existing = found != null &&
+              found.engineVersion == BaziAnalysisService.kEngineVersion &&
+              found.ruleRevision == ruleRevision
+          ? found
+          : null;
       if (existing != null) {
         // Questions are often asked after the case was saved, so a repeat
         // save merges the new ones in rather than reporting a duplicate and
@@ -187,6 +198,7 @@ class _AiAnalysisPageState extends ConsumerState<AiAnalysisPage> {
         title: '${chart.baziString} · $_scopeTitle',
         scopeLabel: _scopeTitle,
         engineVersion: BaziAnalysisService.kEngineVersion,
+        ruleRevision: ruleRevision,
         aiText: analysis.rawText,
         reviewDueAt: CaseRecord.scopeEndOf(report.context),
         qa: _qaPairs,

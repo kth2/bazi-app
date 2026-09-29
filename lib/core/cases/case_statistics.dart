@@ -292,6 +292,28 @@ class CaseStatistics {
   /// The same per question kind.
   final Map<QuestionTopic, ChoiceBias> choiceByTopic;
 
+  /// Per program — engine version plus 条例 revision, labelled `v12` or
+  /// `v12·条例3`. Adopting a 条例 changes what answers the questions as
+  /// surely as an engine release does.
+  final Map<String, ChoiceBias> choiceByProgram;
+
+  static String programLabel(CaseRecord r) => r.ruleRevision == 0
+      ? 'v${r.engineVersion}'
+      : 'v${r.engineVersion}·条例${r.ruleRevision}';
+
+  /// Numeric, not lexical: `v9` is older than `v12`.
+  static int compareProgramsNewestFirst(String a, String b) {
+    (int, int) parse(String s) {
+      final m = RegExp(r'^v(\d+)(?:·条例(\d+))?$').firstMatch(s);
+      if (m == null) return (-1, -1);
+      return (int.parse(m.group(1)!), int.parse(m.group(2) ?? '0'));
+    }
+
+    final (ea, ra) = parse(a);
+    final (eb, rb) = parse(b);
+    return eb != ea ? eb.compareTo(ea) : rb.compareTo(ra);
+  }
+
   const CaseStatistics({
     required this.cases,
     required this.reviewedCases,
@@ -307,6 +329,7 @@ class CaseStatistics {
     this.choice = const ChoiceBias(),
     this.choiceByVersion = const {},
     this.choiceByTopic = const {},
+    this.choiceByProgram = const {},
   });
 
   /// Below this a percentage is noise dressed as a measurement, and the UI
@@ -341,6 +364,7 @@ class CaseStatistics {
     var choice = const ChoiceBias();
     final choiceByVersion = <int, ChoiceBias>{};
     final choiceByTopic = <QuestionTopic, ChoiceBias>{};
+    final choiceByProgram = <String, ChoiceBias>{};
 
     var reviewedCases = 0;
     var dueCases = 0;
@@ -393,6 +417,9 @@ class CaseStatistics {
             final version = record.engineVersion;
             choiceByVersion[version] =
                 (choiceByVersion[version] ?? const ChoiceBias()).plus(lean, v);
+            final program = programLabel(record);
+            choiceByProgram[program] =
+                (choiceByProgram[program] ?? const ChoiceBias()).plus(lean, v);
             final topic = claim.choice?.topic;
             if (topic != null) {
               choiceByTopic[topic] =
@@ -442,6 +469,7 @@ class CaseStatistics {
       choice: choice,
       choiceByVersion: choiceByVersion,
       choiceByTopic: choiceByTopic,
+      choiceByProgram: choiceByProgram,
     );
   }
 

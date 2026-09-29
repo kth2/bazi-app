@@ -387,6 +387,58 @@ class NatalStructureResolver {
       }
     });
 
+    // --- 官来混杀 ---
+    //
+    // 七杀格最怕正官来混。The spec's breakers work on 十神 groups, and 官 and
+    // 杀 share one, so a 正官 standing apart from the 杀 was never seen as a
+    // breaker at all: 甲戌 丙寅 戊子 乙卯 came out 成格 with a 正官 on the
+    // hour stem. 官杀相连（年月）只论杀 is exempt; a 伤官 on the stems can
+    // 去官留杀.
+    if (pattern.geJu == '七杀格') {
+      final xiangLian = PatternDetector.guanShaXiangLian(chart);
+      final apart = [
+        for (var i = 0; i < chart.pillars.length; i++)
+          if (chart.pillars[i].ganShiShen == '正官' && !(xiangLian && i < 2))
+            chart.pillars[i],
+      ];
+      if (apart.isNotEmpty) {
+        final guan = apart.first;
+        po.add('${guan.position}透${guan.gan}正官，官来混杀，未能取清');
+        jiShen.add('正官');
+        if (chart.pillars.any((p) => p.ganShiShen == '伤官')) {
+          jiu.add('伤官透干克官，去官留杀，破而有救');
+        }
+      }
+    }
+
+    // --- 财格佩印：财印不宜相并 ---
+    //
+    // 《子平真诠·论财》：有财格佩印者，盖孤财不贵，佩印帮身，即印取贵。然
+    // 财印不宜相并。When 印 is what completes a 财格 but a 财 stem sits
+    // right against the 印 stem, the 用 attacks its own 相: 财来坏印。Only the
+    // year and month stems can touch without the day master between them.
+    // 官杀 on the stems passes 财 through to 印 (财生官、官生印), which is
+    // the one thing that lets them stand together.
+    if ((pattern.geJu == '正财格' || pattern.geJu == '偏财格') &&
+        xiangShen.contains('印星')) {
+      final a = chart.pillars[0], b = chart.pillars[1];
+      bool isCai(String s) => s == '正财' || s == '偏财';
+      bool isYin(String s) => s == '正印' || s == '偏印';
+      final touching = (isCai(a.ganShiShen) && isYin(b.ganShiShen)) ||
+          (isYin(a.ganShiShen) && isCai(b.ganShiShen));
+      if (touching) {
+        final cai = isCai(a.ganShiShen) ? a : b;
+        final yin = isCai(a.ganShiShen) ? b : a;
+        po.add('财印相并（${cai.position}${cai.gan}财紧贴${yin.position}${yin.gan}印），'
+            '财来坏印，用相失和');
+        final guanStem = chart.pillars.any(
+            (p) => p.ganShiShen == '正官' || p.ganShiShen == '七杀');
+        if (guanStem) {
+          jiu.add('官杀透干通关，财生官、官生印，财印不相碍');
+        }
+      }
+    }
+
     // --- 无制无化则格败 ---
     if (xiangShen.isEmpty && geShen != null) {
       if (!spec.shunYong && (presence[geShen]?.isStrong ?? false)) {

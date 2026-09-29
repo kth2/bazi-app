@@ -8,6 +8,7 @@ import '../../providers/case_provider.dart';
 import '../../theme.dart';
 import 'case_detail_page.dart';
 import 'case_stats_page.dart';
+import 'rule_lab_page.dart';
 
 /// 案例库 — every saved reading, and whether its outcome has been filled in.
 class CaseListPage extends ConsumerStatefulWidget {
@@ -62,6 +63,13 @@ class _CaseListPageState extends ConsumerState<CaseListPage> {
       appBar: AppBar(
         title: const Text('案例库'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_fix_high_outlined),
+            tooltip: '条例修订（AI 反推）',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const RuleLabPage()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.insights_outlined),
             tooltip: '准确率统计',

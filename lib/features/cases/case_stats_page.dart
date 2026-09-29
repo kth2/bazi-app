@@ -6,6 +6,7 @@ import '../../core/cases/case_statistics.dart';
 import '../../core/cases/choice_question.dart';
 import '../../providers/case_provider.dart';
 import '../../theme.dart';
+import 'rule_lab_page.dart';
 
 /// Observed 应验率 — the solid mark.
 const Color kObservedColor = kPrimaryRed;
@@ -31,7 +32,18 @@ class CaseStatsPage extends ConsumerWidget {
     final async = ref.watch(caseListProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('准确率统计')),
+      appBar: AppBar(
+        title: const Text('准确率统计'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_fix_high_outlined),
+            tooltip: '条例修订（AI 反推）',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const RuleLabPage()),
+            ),
+          ),
+        ],
+      ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('读取失败：$e')),
@@ -283,8 +295,8 @@ class _ChoiceBiasCard extends StatelessWidget {
           ),
         );
 
-    final versions = stats.choiceByVersion.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final programs = stats.choiceByProgram.keys.toList()
+      ..sort(CaseStatistics.compareProgramsNewestFirst);
 
     return Card(
       child: Padding(
@@ -335,12 +347,12 @@ class _ChoiceBiasCard extends StatelessWidget {
               '实际比例，才说明 AI 的选择带着命盘里的信息。',
               style: TextStyle(fontSize: 11, height: 1.5, color: muted),
             ),
-            if (versions.length > 1 || stats.choiceByTopic.length > 1)
+            if (programs.length > 1 || stats.choiceByTopic.length > 1)
               const Divider(height: 20),
-            if (versions.length > 1)
-              for (final v in versions)
-                _choiceRow('v$v', stats.choiceByVersion[v]!, muted),
-            if (versions.length > 1 && stats.choiceByTopic.length > 1)
+            if (programs.length > 1)
+              for (final v in programs)
+                _choiceRow(v, stats.choiceByProgram[v]!, muted),
+            if (programs.length > 1 && stats.choiceByTopic.length > 1)
               const SizedBox(height: 6),
             if (stats.choiceByTopic.length > 1)
               for (final t in QuestionTopic.values)
@@ -357,7 +369,7 @@ class _ChoiceBiasCard extends StatelessWidget {
         child: Row(
           children: [
             SizedBox(
-              width: 72,
+              width: 84,
               child: Text(label, style: const TextStyle(fontSize: 12)),
             ),
             Expanded(
@@ -862,8 +874,8 @@ class _CaveatCard extends StatelessWidget {
       '只有选择题有对照（见「选择题：和不看命盘比」），其余条目没有基准率对照。'
           '「事业会有变动」这种话本身命中率就很高，高分未必来自推断有效。',
       '「部分应验」记半分，是个宽松约定。所以严格值也一并给出。',
-      '这些数字不会回流到引擎里。理论固定，推演结构化；'
-          '历史结果是拿来给人判断理论的，不是拿来让程序改自己的。',
+      '这些数字不会自动回流到引擎里。「条例修订」可以让 AI 从答错的题反推条例，'
+          '但条例要在没参与反推的题上回测，改对多于改错，并经你确认，才会生效。',
     ];
 
     return Card(

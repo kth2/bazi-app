@@ -273,6 +273,10 @@ class CaseRecord {
   /// attributable to the reasoning that actually made it.
   final int engineVersion;
 
+  /// Which 条例 revision was in force — the other half of "which program
+  /// made this reading". 0 before any 条例 was adopted.
+  final int ruleRevision;
+
   final String structureSummary;
   final List<PredictedClaim> claims;
 
@@ -297,6 +301,7 @@ class CaseRecord {
     required this.baziString,
     required this.scopeLabel,
     required this.engineVersion,
+    this.ruleRevision = 0,
     required this.structureSummary,
     required this.claims,
     required this.createdAt,
@@ -319,6 +324,7 @@ class CaseRecord {
         baziString: baziString,
         scopeLabel: scopeLabel,
         engineVersion: engineVersion,
+        ruleRevision: ruleRevision,
         structureSummary: structureSummary,
         claims: claims ?? this.claims,
         aiText: aiText,
@@ -376,6 +382,7 @@ class CaseRecord {
         'baziString': baziString,
         'scopeLabel': scopeLabel,
         'engineVersion': engineVersion,
+        if (ruleRevision != 0) 'ruleRevision': ruleRevision,
         'structureSummary': structureSummary,
         'claims': claims.map((c) => c.toJson()).toList(),
         'aiText': aiText,
@@ -393,6 +400,7 @@ class CaseRecord {
         baziString: json['baziString'] as String? ?? '',
         scopeLabel: json['scopeLabel'] as String? ?? '',
         engineVersion: json['engineVersion'] as int? ?? 0,
+        ruleRevision: json['ruleRevision'] as int? ?? 0,
         structureSummary: json['structureSummary'] as String? ?? '',
         claims: [
           for (final c in (json['claims'] as List? ?? const []))
@@ -416,6 +424,7 @@ class CaseRecord {
     required String title,
     required String scopeLabel,
     required int engineVersion,
+    int ruleRevision = 0,
     String aiText = '',
     DateTime? createdAt,
     DateTime? reviewDueAt,
@@ -447,6 +456,7 @@ class CaseRecord {
       baziString: report.chart.baziString,
       scopeLabel: scopeLabel,
       engineVersion: engineVersion,
+      ruleRevision: ruleRevision,
       structureSummary: report.structure.summary,
       claims: claims,
       aiText: aiText,
