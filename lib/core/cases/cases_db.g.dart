@@ -70,6 +70,18 @@ class $CaseRowsTable extends CaseRows with TableInfo<$CaseRowsTable, CaseRow> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _ruleRevisionMeta = const VerificationMeta(
+    'ruleRevision',
+  );
+  @override
+  late final GeneratedColumn<int> ruleRevision = GeneratedColumn<int>(
+    'rule_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _structureSummaryMeta = const VerificationMeta(
     'structureSummary',
   );
@@ -156,6 +168,7 @@ class $CaseRowsTable extends CaseRows with TableInfo<$CaseRowsTable, CaseRow> {
     inputJson,
     scopeLabel,
     engineVersion,
+    ruleRevision,
     structureSummary,
     claimsJson,
     aiText,
@@ -223,6 +236,15 @@ class $CaseRowsTable extends CaseRows with TableInfo<$CaseRowsTable, CaseRow> {
       );
     } else if (isInserting) {
       context.missing(_engineVersionMeta);
+    }
+    if (data.containsKey('rule_revision')) {
+      context.handle(
+        _ruleRevisionMeta,
+        ruleRevision.isAcceptableOrUnknown(
+          data['rule_revision']!,
+          _ruleRevisionMeta,
+        ),
+      );
     }
     if (data.containsKey('structure_summary')) {
       context.handle(
@@ -317,6 +339,10 @@ class $CaseRowsTable extends CaseRows with TableInfo<$CaseRowsTable, CaseRow> {
         DriftSqlType.int,
         data['${effectivePrefix}engine_version'],
       )!,
+      ruleRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rule_revision'],
+      )!,
       structureSummary: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}structure_summary'],
@@ -361,6 +387,9 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
   final String inputJson;
   final String scopeLabel;
   final int engineVersion;
+
+  /// 条例 revision the reading was made under (schema v2).
+  final int ruleRevision;
   final String structureSummary;
   final String claimsJson;
   final String aiText;
@@ -375,6 +404,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
     required this.inputJson,
     required this.scopeLabel,
     required this.engineVersion,
+    required this.ruleRevision,
     required this.structureSummary,
     required this.claimsJson,
     required this.aiText,
@@ -392,6 +422,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
     map['input_json'] = Variable<String>(inputJson);
     map['scope_label'] = Variable<String>(scopeLabel);
     map['engine_version'] = Variable<int>(engineVersion);
+    map['rule_revision'] = Variable<int>(ruleRevision);
     map['structure_summary'] = Variable<String>(structureSummary);
     map['claims_json'] = Variable<String>(claimsJson);
     map['ai_text'] = Variable<String>(aiText);
@@ -414,6 +445,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
       inputJson: Value(inputJson),
       scopeLabel: Value(scopeLabel),
       engineVersion: Value(engineVersion),
+      ruleRevision: Value(ruleRevision),
       structureSummary: Value(structureSummary),
       claimsJson: Value(claimsJson),
       aiText: Value(aiText),
@@ -440,6 +472,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
       inputJson: serializer.fromJson<String>(json['inputJson']),
       scopeLabel: serializer.fromJson<String>(json['scopeLabel']),
       engineVersion: serializer.fromJson<int>(json['engineVersion']),
+      ruleRevision: serializer.fromJson<int>(json['ruleRevision']),
       structureSummary: serializer.fromJson<String>(json['structureSummary']),
       claimsJson: serializer.fromJson<String>(json['claimsJson']),
       aiText: serializer.fromJson<String>(json['aiText']),
@@ -459,6 +492,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
       'inputJson': serializer.toJson<String>(inputJson),
       'scopeLabel': serializer.toJson<String>(scopeLabel),
       'engineVersion': serializer.toJson<int>(engineVersion),
+      'ruleRevision': serializer.toJson<int>(ruleRevision),
       'structureSummary': serializer.toJson<String>(structureSummary),
       'claimsJson': serializer.toJson<String>(claimsJson),
       'aiText': serializer.toJson<String>(aiText),
@@ -476,6 +510,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
     String? inputJson,
     String? scopeLabel,
     int? engineVersion,
+    int? ruleRevision,
     String? structureSummary,
     String? claimsJson,
     String? aiText,
@@ -490,6 +525,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
     inputJson: inputJson ?? this.inputJson,
     scopeLabel: scopeLabel ?? this.scopeLabel,
     engineVersion: engineVersion ?? this.engineVersion,
+    ruleRevision: ruleRevision ?? this.ruleRevision,
     structureSummary: structureSummary ?? this.structureSummary,
     claimsJson: claimsJson ?? this.claimsJson,
     aiText: aiText ?? this.aiText,
@@ -514,6 +550,9 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
       engineVersion: data.engineVersion.present
           ? data.engineVersion.value
           : this.engineVersion,
+      ruleRevision: data.ruleRevision.present
+          ? data.ruleRevision.value
+          : this.ruleRevision,
       structureSummary: data.structureSummary.present
           ? data.structureSummary.value
           : this.structureSummary,
@@ -543,6 +582,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
           ..write('inputJson: $inputJson, ')
           ..write('scopeLabel: $scopeLabel, ')
           ..write('engineVersion: $engineVersion, ')
+          ..write('ruleRevision: $ruleRevision, ')
           ..write('structureSummary: $structureSummary, ')
           ..write('claimsJson: $claimsJson, ')
           ..write('aiText: $aiText, ')
@@ -562,6 +602,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
     inputJson,
     scopeLabel,
     engineVersion,
+    ruleRevision,
     structureSummary,
     claimsJson,
     aiText,
@@ -580,6 +621,7 @@ class CaseRow extends DataClass implements Insertable<CaseRow> {
           other.inputJson == this.inputJson &&
           other.scopeLabel == this.scopeLabel &&
           other.engineVersion == this.engineVersion &&
+          other.ruleRevision == this.ruleRevision &&
           other.structureSummary == this.structureSummary &&
           other.claimsJson == this.claimsJson &&
           other.aiText == this.aiText &&
@@ -596,6 +638,7 @@ class CaseRowsCompanion extends UpdateCompanion<CaseRow> {
   final Value<String> inputJson;
   final Value<String> scopeLabel;
   final Value<int> engineVersion;
+  final Value<int> ruleRevision;
   final Value<String> structureSummary;
   final Value<String> claimsJson;
   final Value<String> aiText;
@@ -611,6 +654,7 @@ class CaseRowsCompanion extends UpdateCompanion<CaseRow> {
     this.inputJson = const Value.absent(),
     this.scopeLabel = const Value.absent(),
     this.engineVersion = const Value.absent(),
+    this.ruleRevision = const Value.absent(),
     this.structureSummary = const Value.absent(),
     this.claimsJson = const Value.absent(),
     this.aiText = const Value.absent(),
@@ -627,6 +671,7 @@ class CaseRowsCompanion extends UpdateCompanion<CaseRow> {
     required String inputJson,
     required String scopeLabel,
     required int engineVersion,
+    this.ruleRevision = const Value.absent(),
     required String structureSummary,
     required String claimsJson,
     this.aiText = const Value.absent(),
@@ -651,6 +696,7 @@ class CaseRowsCompanion extends UpdateCompanion<CaseRow> {
     Expression<String>? inputJson,
     Expression<String>? scopeLabel,
     Expression<int>? engineVersion,
+    Expression<int>? ruleRevision,
     Expression<String>? structureSummary,
     Expression<String>? claimsJson,
     Expression<String>? aiText,
@@ -667,6 +713,7 @@ class CaseRowsCompanion extends UpdateCompanion<CaseRow> {
       if (inputJson != null) 'input_json': inputJson,
       if (scopeLabel != null) 'scope_label': scopeLabel,
       if (engineVersion != null) 'engine_version': engineVersion,
+      if (ruleRevision != null) 'rule_revision': ruleRevision,
       if (structureSummary != null) 'structure_summary': structureSummary,
       if (claimsJson != null) 'claims_json': claimsJson,
       if (aiText != null) 'ai_text': aiText,
@@ -685,6 +732,7 @@ class CaseRowsCompanion extends UpdateCompanion<CaseRow> {
     Value<String>? inputJson,
     Value<String>? scopeLabel,
     Value<int>? engineVersion,
+    Value<int>? ruleRevision,
     Value<String>? structureSummary,
     Value<String>? claimsJson,
     Value<String>? aiText,
@@ -701,6 +749,7 @@ class CaseRowsCompanion extends UpdateCompanion<CaseRow> {
       inputJson: inputJson ?? this.inputJson,
       scopeLabel: scopeLabel ?? this.scopeLabel,
       engineVersion: engineVersion ?? this.engineVersion,
+      ruleRevision: ruleRevision ?? this.ruleRevision,
       structureSummary: structureSummary ?? this.structureSummary,
       claimsJson: claimsJson ?? this.claimsJson,
       aiText: aiText ?? this.aiText,
@@ -732,6 +781,9 @@ class CaseRowsCompanion extends UpdateCompanion<CaseRow> {
     }
     if (engineVersion.present) {
       map['engine_version'] = Variable<int>(engineVersion.value);
+    }
+    if (ruleRevision.present) {
+      map['rule_revision'] = Variable<int>(ruleRevision.value);
     }
     if (structureSummary.present) {
       map['structure_summary'] = Variable<String>(structureSummary.value);
@@ -769,6 +821,7 @@ class CaseRowsCompanion extends UpdateCompanion<CaseRow> {
           ..write('inputJson: $inputJson, ')
           ..write('scopeLabel: $scopeLabel, ')
           ..write('engineVersion: $engineVersion, ')
+          ..write('ruleRevision: $ruleRevision, ')
           ..write('structureSummary: $structureSummary, ')
           ..write('claimsJson: $claimsJson, ')
           ..write('aiText: $aiText, ')
@@ -801,6 +854,7 @@ typedef $$CaseRowsTableCreateCompanionBuilder =
       required String inputJson,
       required String scopeLabel,
       required int engineVersion,
+      Value<int> ruleRevision,
       required String structureSummary,
       required String claimsJson,
       Value<String> aiText,
@@ -818,6 +872,7 @@ typedef $$CaseRowsTableUpdateCompanionBuilder =
       Value<String> inputJson,
       Value<String> scopeLabel,
       Value<int> engineVersion,
+      Value<int> ruleRevision,
       Value<String> structureSummary,
       Value<String> claimsJson,
       Value<String> aiText,
@@ -864,6 +919,11 @@ class $$CaseRowsTableFilterComposer
 
   ColumnFilters<int> get engineVersion => $composableBuilder(
     column: $table.engineVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get ruleRevision => $composableBuilder(
+    column: $table.ruleRevision,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -942,6 +1002,11 @@ class $$CaseRowsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get ruleRevision => $composableBuilder(
+    column: $table.ruleRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get structureSummary => $composableBuilder(
     column: $table.structureSummary,
     builder: (column) => ColumnOrderings(column),
@@ -1011,6 +1076,11 @@ class $$CaseRowsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get ruleRevision => $composableBuilder(
+    column: $table.ruleRevision,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get structureSummary => $composableBuilder(
     column: $table.structureSummary,
     builder: (column) => column,
@@ -1077,6 +1147,7 @@ class $$CaseRowsTableTableManager
                 Value<String> inputJson = const Value.absent(),
                 Value<String> scopeLabel = const Value.absent(),
                 Value<int> engineVersion = const Value.absent(),
+                Value<int> ruleRevision = const Value.absent(),
                 Value<String> structureSummary = const Value.absent(),
                 Value<String> claimsJson = const Value.absent(),
                 Value<String> aiText = const Value.absent(),
@@ -1092,6 +1163,7 @@ class $$CaseRowsTableTableManager
                 inputJson: inputJson,
                 scopeLabel: scopeLabel,
                 engineVersion: engineVersion,
+                ruleRevision: ruleRevision,
                 structureSummary: structureSummary,
                 claimsJson: claimsJson,
                 aiText: aiText,
@@ -1109,6 +1181,7 @@ class $$CaseRowsTableTableManager
                 required String inputJson,
                 required String scopeLabel,
                 required int engineVersion,
+                Value<int> ruleRevision = const Value.absent(),
                 required String structureSummary,
                 required String claimsJson,
                 Value<String> aiText = const Value.absent(),
@@ -1124,6 +1197,7 @@ class $$CaseRowsTableTableManager
                 inputJson: inputJson,
                 scopeLabel: scopeLabel,
                 engineVersion: engineVersion,
+                ruleRevision: ruleRevision,
                 structureSummary: structureSummary,
                 claimsJson: claimsJson,
                 aiText: aiText,

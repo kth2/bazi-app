@@ -84,9 +84,14 @@ class PatternDetector {
     String geJu;
     String yongShen;
     String? luJieYong;
+    final zaQi = congGe == null ? zaQiTransparent(chart) : null;
     if (congGe != null) {
       geJu = congGe.name;
       yongShen = congGe.yongShen;
+    } else if (zaQi != null) {
+      geJu = '${zaQi.shiShen}格';
+      yongShen = '杂气月令${monthPillar.zhi}，本气${monthPillar.cangGan.first.gan}'
+          '不透，取透出之${zaQi.gan}${zaQi.shiShen}为用神';
     } else if (monthMainShiShen == '比肩') {
       geJu = '建禄格';
       (yongShen, luJieYong) = _luJieYongShen(chart);
@@ -98,6 +103,17 @@ class PatternDetector {
       final mainGan =
           monthPillar.cangGan.isEmpty ? '' : monthPillar.cangGan.first.gan;
       yongShen = '月令$mainGan$monthMainShiShen为用神';
+    }
+
+    // 官杀相连只论杀：年月两干一官一杀，统一以七杀论，不作混杂。
+    final xiangLian = congGe == null && guanShaXiangLian(chart);
+    if (xiangLian && (geJu == '正官格' || geJu == '七杀格')) {
+      if (geJu == '正官格') {
+        geJu = '七杀格';
+        yongShen = '$yongShen；年月官杀相连只论杀，统一以七杀为用';
+      } else {
+        yongShen = '$yongShen；年月官杀相连只论杀，不作混杂';
+      }
     }
 
     // --- 特殊场景 ---
@@ -158,9 +174,16 @@ class PatternDetector {
     }
     // 官杀混杂: both must reach 本气 or 透干 — already a real gate — and the
     // pair together has to amount to something.
+    //
+    // Except 官杀相连: a year/month pair of 官 and 杀 reads as 杀 alone, so
+    // it is 混杂 only when a 官 or 杀 stands apart from that pair.
+    final separateGuanSha = !xiangLian ||
+        chart.pillars[3].ganShiShen == '正官' ||
+        chart.pillars[3].ganShiShen == '七杀';
     if (countMain(const {'正官'}) >= 1 &&
         countMain(const {'七杀'}) >= 1 &&
-        present('官杀')) {
+        present('官杀') &&
+        separateGuanSha) {
       hit('官杀混杂', ['官杀']);
     }
     // 枭神夺食: both 透干 already.
@@ -370,6 +393,50 @@ class PatternDetector {
     }
 
     return null;
+  }
+
+  static const Set<String> _siKu = {'辰', '戌', '丑', '未'};
+
+  /// 杂气月令 whose 本气 is not transparent but a 中气/余气 is.
+  ///
+  /// 《子平真诠·论杂气如何取用》：四墓者，冲气也……透干取之。A 辰戌丑未
+  /// month holds three stems; the 格 is the one the stems bring out. Taking
+  /// the 本气 regardless read 甲午 甲戌 己未 丁卯 — 戌 月，丁 透 — as 月劫格,
+  /// when it is 杂气偏印格 with 官 on both sides (the man became a 厅长).
+  ///
+  /// The 本气 still wins whenever it is transparent itself. When several
+  /// 中余气 show, the one on the month stem is taken first — 透于月干 is the
+  /// nearest to the 月令 — then 中气 before 余气.
+  ///
+  /// Simplification: a 比劫 in the 中余气 is skipped, so such a chart keeps
+  /// its 本气 格. The classic does take 月劫 by 透干 (甲生辰月透乙则用月劫);
+  /// routing that through the 禄劫 path is left for when a case needs it.
+  static ({String gan, String shiShen})? zaQiTransparent(ChartResult chart) {
+    final month = chart.pillars[1];
+    if (!_siKu.contains(month.zhi) || month.cangGan.length < 2) return null;
+    final stems = {
+      for (final p in chart.pillars)
+        if (p.ganShiShen != '日主') p.gan,
+    };
+    if (stems.contains(month.cangGan.first.gan)) return null;
+    final candidates = [
+      for (final c in month.cangGan.skip(1))
+        if (c.shiShen != '比肩' && c.shiShen != '劫财' && stems.contains(c.gan))
+          c,
+    ];
+    if (candidates.isEmpty) return null;
+    final pick = candidates.firstWhere((c) => c.gan == month.gan,
+        orElse: () => candidates.first);
+    return (gan: pick.gan, shiShen: pick.shiShen);
+  }
+
+  /// 年月两干一正官一七杀。
+  ///
+  /// 《神峰通考·官煞去留》：官杀相连只论杀，官杀各分为混杂。年干官、月干杀，
+  /// 或年干杀、月干官，是谓相连，只以杀论。
+  static bool guanShaXiangLian(ChartResult chart) {
+    final pair = {chart.pillars[0].ganShiShen, chart.pillars[1].ganShiShen};
+    return pair.length == 2 && pair.containsAll(const {'正官', '七杀'});
   }
 
   /// 禄劫格 can't use the month itself: 有煞先论煞，有官先论官，

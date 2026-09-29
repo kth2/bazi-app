@@ -339,7 +339,7 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
             if (r.engineVersion != 0) ...[
               const SizedBox(height: 4),
               const Text(
-                '回填结果只作复盘之用，不会自动修改命理规则或权重。',
+                '回填结果不会自动修改命理规则或权重；只有在「条例修订」里经回测、由你确认采用的条例才会生效。',
                 style: TextStyle(fontSize: 11, color: Colors.black45),
               ),
             ],

@@ -167,7 +167,7 @@ void main() {
     await scrollTo(tester, find.textContaining('记录和评判都由你自己做'));
     expect(find.textContaining('记录和评判都由你自己做'), findsOneWidget);
     expect(find.textContaining('没有基准率对照'), findsOneWidget);
-    expect(find.textContaining('不会回流到引擎里'), findsOneWidget);
+    expect(find.textContaining('不会自动回流到引擎里'), findsOneWidget);
   });
 
   testWidgets('renders without a crash at every sample size', (tester) async {

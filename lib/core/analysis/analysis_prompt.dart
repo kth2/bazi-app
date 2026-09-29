@@ -30,9 +30,11 @@ class AnalysisPrompt {
   static String build({
     required ReasoningReport report,
     required List<ExampleMatch> examples,
+    List<String> customRules = const [],
   }) {
     final buf = StringBuffer();
-    _writeContext(buf, report: report, examples: examples);
+    _writeContext(buf,
+        report: report, examples: examples, customRules: customRules);
 
     final depth = report.context.depth;
     buf.writeln();
@@ -85,9 +87,11 @@ class AnalysisPrompt {
     required ReasoningReport report,
     required List<ExampleMatch> examples,
     required String question,
+    List<String> customRules = const [],
   }) {
     final buf = StringBuffer();
-    _writeContext(buf, report: report, examples: examples);
+    _writeContext(buf,
+        report: report, examples: examples, customRules: customRules);
 
     buf.writeln();
     buf.writeln('【用户问题】');
@@ -123,16 +127,18 @@ class AnalysisPrompt {
     StringBuffer buf, {
     required ReasoningReport report,
     required List<ExampleMatch> examples,
+    List<String> customRules = const [],
   }) {
     final s = report.structure;
 
     buf.writeln('你是一位经验丰富的八字命理师，以《子平真诠》格局法论命：'
         '用神专求月令，先定格局，再看成败，忌以单纯身强身弱套论。');
     buf.writeln();
-    _writeGuardrails(buf);
+    _writeGuardrails(buf, hasCustomRules: customRules.isNotEmpty);
     buf.writeln();
     _writeExamples(buf, examples, report.pattern.tags);
     buf.writeln(kHuYimingNotes);
+    _writeCustomRules(buf, customRules);
 
     buf.writeln('【原局】');
     buf.writeln(jsonEncode(report.chart.toJson()));
@@ -171,11 +177,30 @@ class AnalysisPrompt {
     buf.writeln();
   }
 
-  static void _writeGuardrails(StringBuffer buf) {
+  /// 条例 the user adopted after a backtest (see `rule_lab.dart`).
+  ///
+  /// They carry the same weight as the engine's chain. When one applies and
+  /// the chain above says otherwise, the 条例 wins — that is the point of
+  /// adopting it — but the answer has to name it, so a reading that turned
+  /// on a custom 条例 can be traced to it.
+  static void _writeCustomRules(StringBuffer buf, List<String> rules) {
+    if (rules.isEmpty) return;
+    buf.writeln('【自定义条例——经案例回测后采用，与引擎推演同等效力】');
+    for (var i = 0; i < rules.length; i++) {
+      buf.writeln('${i + 1}. ${rules[i]}');
+    }
+    buf.writeln('逐条检查是否适用于本命。适用者须据以判断；若与下方推演结论不同，'
+        '以条例为准，并写明「依自定义条例第N条」。不适用者不必提及。');
+    buf.writeln();
+  }
+
+  static void _writeGuardrails(StringBuffer buf,
+      {bool hasCustomRules = false}) {
     buf.writeln('【重要——分工说明】');
     buf.writeln('以下推演已由命理引擎依古法逐层算定。你的任务是「解释并落到人事」，'
         '不是重新推导。具体地：');
-    buf.writeln('- 格局、成败、用神、相神、忌神：已定，不得改判，也不要另立一套用神；');
+    buf.writeln('- 格局、成败、用神、相神、忌神：已定，不得改判，也不要另立一套用神'
+        '${hasCustomRules ? '（唯【自定义条例】明确适用时，依条例调整并注明）' : ''}；');
     buf.writeln('- 岁运与原局的干支作用：已列全，不得增删或改换作用关系；');
     buf.writeln('- 应期（何时应事）：已由引擎按干支作用排定，'
         '你只能引用下方【应期】所列窗口，不得自行指定其他日期；');

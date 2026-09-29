@@ -127,7 +127,12 @@ class AiService {
 
   AiService({http.Client? client}) : _client = client ?? http.Client();
 
-  Future<String> complete(String prompt, AiSettings settings) async {
+  /// [temperature] is left to the provider's default unless given. The rule
+  /// backtest passes a low value: it asks the same question twice, with and
+  /// without a candidate 条例, and wants any difference to come from the
+  /// 条例 rather than from sampling.
+  Future<String> complete(String prompt, AiSettings settings,
+      {double? temperature}) async {
     if (!settings.isConfigured) {
       throw const AiException('尚未设置 API Key，请先在设置中填入。');
     }
@@ -135,20 +140,20 @@ class AiService {
       case 'openrouter':
         return _openAiCompatible(
             'https://openrouter.ai/api/v1', settings.apiKey, settings.model, prompt,
-            providerName: 'OpenRouter');
+            providerName: 'OpenRouter', temperature: temperature);
       case 'agnes':
         return _openAiCompatible(
             kAgnesBaseUrl, settings.apiKey, settings.model, prompt,
-            providerName: 'Agnes');
+            providerName: 'Agnes', temperature: temperature);
       case 'other':
         final base = _normalizeBase(settings.otherBaseUrl);
         if (base.isEmpty) {
           throw const AiException('自定义服务尚未填写 API 地址（Base URL）。');
         }
         return _openAiCompatible(base, settings.apiKey, settings.model, prompt,
-            providerName: '自定义服务');
+            providerName: '自定义服务', temperature: temperature);
       default:
-        return _gemini(prompt, settings);
+        return _gemini(prompt, settings, temperature: temperature);
     }
   }
 
@@ -183,7 +188,8 @@ class AiService {
   // Gemini
   // -------------------------------------------------------------------
 
-  Future<String> _gemini(String prompt, AiSettings s) async {
+  Future<String> _gemini(String prompt, AiSettings s,
+      {double? temperature}) async {
     final uri = Uri.parse(
         'https://generativelanguage.googleapis.com/v1beta/models/${s.model}:generateContent');
     final resp = await _client
@@ -201,6 +207,8 @@ class AiService {
                 ]
               }
             ],
+            if (temperature != null)
+              'generationConfig': {'temperature': temperature},
           }),
         )
         .timeout(const Duration(seconds: 120));
@@ -257,6 +265,7 @@ class AiService {
     String model,
     String prompt, {
     required String providerName,
+    double? temperature,
   }) async {
     if (model.trim().isEmpty) {
       throw AiException('$providerName 尚未选择模型。');
@@ -273,6 +282,7 @@ class AiService {
             'messages': [
               {'role': 'user', 'content': prompt}
             ],
+            'temperature': ?temperature,
           }),
         )
         .timeout(const Duration(seconds: 120));

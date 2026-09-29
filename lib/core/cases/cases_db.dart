@@ -16,6 +16,9 @@ class CaseRows extends Table {
   TextColumn get inputJson => text()();
   TextColumn get scopeLabel => text()();
   IntColumn get engineVersion => integer()();
+
+  /// 条例 revision the reading was made under (schema v2).
+  IntColumn get ruleRevision => integer().withDefault(const Constant(0))();
   TextColumn get structureSummary => text()();
   TextColumn get claimsJson => text()();
   TextColumn get aiText => text().withDefault(const Constant(''))();
@@ -41,13 +44,17 @@ class CasesDatabase extends _$CasesDatabase {
   CasesDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   /// Additive only. A future column must be added with `m.addColumn`; this
   /// table holds records a person entered by hand and cannot be regenerated.
   @override
-  MigrationStrategy get migration =>
-      MigrationStrategy(onCreate: (m) => m.createAll());
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) await m.addColumn(caseRows, caseRows.ruleRevision);
+        },
+      );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -94,6 +101,7 @@ class CaseRepository implements CaseStore {
         baziString: r.baziString,
         scopeLabel: r.scopeLabel,
         engineVersion: r.engineVersion,
+        ruleRevision: r.ruleRevision,
         structureSummary: r.structureSummary,
         claims: CaseRecord.decodeClaims(r.claimsJson),
         aiText: r.aiText,
@@ -110,6 +118,7 @@ class CaseRepository implements CaseStore {
         inputJson: jsonEncodeMap(c.input.toJson()),
         scopeLabel: c.scopeLabel,
         engineVersion: c.engineVersion,
+        ruleRevision: Value(c.ruleRevision),
         structureSummary: c.structureSummary,
         claimsJson: CaseRecord.encodeClaims(c.claims),
         aiText: Value(c.aiText),

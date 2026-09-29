@@ -6,9 +6,12 @@ import 'package:bazi_app/core/engine/chart_service.dart';
 import 'package:bazi_app/core/models/birth_input.dart';
 import 'package:bazi_app/core/models/chart_result.dart';
 
+// 3/6/9/12 put the 21st in 卯午酉子 — where 阳刃 sits. Without them the only
+// 阳刃 samples came from 未/戌 boundary days, which the 杂气透干 rule now
+// (correctly) reads as the transparent 中余气's 格 instead.
 final grid = <ChartResult>[
   for (var y = 1960; y <= 2000; y += 2)
-    for (final m in [2, 5, 8, 11])
+    for (final m in [2, 3, 5, 6, 8, 9, 11, 12])
       for (final d in [7, 21])
         for (final g in Gender.values)
           ChartService.compute(BirthInput(

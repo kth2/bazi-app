@@ -3,12 +3,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:bazi_app/core/analysis/reasoning_report.dart';
 import 'package:bazi_app/core/cases/case_record.dart';
+import 'package:bazi_app/core/cases/case_replay.dart';
 import 'package:bazi_app/core/cases/case_statistics.dart';
 import 'package:bazi_app/core/cases/choice_question.dart';
-import 'package:bazi_app/core/engine/chart_service.dart';
-import 'package:bazi_app/core/models/chart_result.dart';
 import 'package:bazi_app/core/rules/rule.dart';
 
 /// Replays an exported case journal through the *current* engine and asks
@@ -57,7 +55,7 @@ void main() {
       ];
       if (questions.isEmpty) continue;
 
-      final report = _rebuild(record, rules);
+      final report = CaseReplay.rebuild(record, rules);
       if (report == null) continue;
       final net = report.assessment.net;
 
@@ -129,42 +127,4 @@ List<Rule> _seedRules() {
     for (final r in json['rules'] as List)
       Rule.fromJson(r as Map<String, dynamic>),
   ];
-}
-
-/// Rebuilds the scope a case was saved under. 流月/流日 cases are skipped —
-/// A/B questions are asked at 命局, 大运 or 流年 depth.
-ReasoningReport? _rebuild(CaseRecord record, List<Rule> rules) {
-  final chart = ChartService.compute(record.input);
-  final label = record.scopeLabel;
-
-  if (label.startsWith('整体命局')) {
-    return ReasoningReport.build(chart, rules);
-  }
-
-  final decadeMatch = RegExp(r'^大运\s*(\S{2})').firstMatch(label);
-  if (decadeMatch != null) {
-    final gz = decadeMatch.group(1)!;
-    final decade = chart.decades.where((d) => d.ganZhi == gz).firstOrNull;
-    return decade == null
-        ? null
-        : ReasoningReport.build(chart, rules, decade: decade);
-  }
-
-  final yearMatch = RegExp(r'^流年\s*(\d{4})').firstMatch(label);
-  if (yearMatch != null) {
-    final y = int.parse(yearMatch.group(1)!);
-    for (final decade in chart.decades) {
-      final year = ChartService.flowYearsOf(chart, decade)
-          .where((f) => f.year == y)
-          .firstOrNull;
-      if (year != null) {
-        return ReasoningReport.build(chart, rules,
-            decade: decade, year: year);
-      }
-    }
-    final FlowYearData? pre =
-        chart.preDaYunYears.where((f) => f.year == y).firstOrNull;
-    return pre == null ? null : ReasoningReport.build(chart, rules, year: pre);
-  }
-  return null;
 }
