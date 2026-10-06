@@ -3,9 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cases/case_export.dart';
 import '../../core/cases/case_record.dart';
+import '../../core/cases/case_replay.dart';
 import '../../core/cases/choice_question.dart';
+import '../../core/engine/chart_service.dart';
+import '../../providers/birth_input_provider.dart';
 import '../../providers/case_provider.dart';
 import '../../theme.dart';
+import '../ai/ai_analysis_page.dart';
+import '../chart/chart_page.dart';
 
 /// One saved case: what the engine claimed, and room to record what happened.
 class CaseDetailPage extends ConsumerStatefulWidget {
@@ -124,6 +129,29 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
     );
   }
 
+  /// Loads the case's birth data into 排盘, so the chart can be studied (or
+  /// asked about again) without typing the date back in.
+  void _openChart(CaseRecord r) {
+    ref.read(birthInputProvider.notifier).state = r.input;
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ChartPage()));
+  }
+
+  /// Straight to the AI page at the case's own 大运/流年, to ask more
+  /// questions there. Answers saved from it join this case only if the
+  /// engine version and 条例 revision still match; otherwise they start a
+  /// new case, so they are scored against the program that gave them.
+  void _openScope(CaseRecord r) {
+    final scope =
+        CaseReplay.scopeOf(ChartService.compute(r.input), r.scopeLabel);
+    if (scope == null) return;
+    ref.read(birthInputProvider.notifier).state = r.input;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) =>
+          AiAnalysisPage(decade: scope.decade, year: scope.year),
+    ));
+  }
+
   Future<void> _pickActualDate(PredictedClaim claim) async {
     final r = _record!;
     final initial = claim.actualDate ?? claim.windowStart ?? r.createdAt;
@@ -233,6 +261,11 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
         title: Text(r.title.isEmpty ? '案例回填' : r.title),
         actions: [
           IconButton(
+            icon: const Icon(Icons.grid_view_outlined),
+            tooltip: '在排盘中打开',
+            onPressed: () => _openChart(r),
+          ),
+          IconButton(
             icon: const Icon(Icons.download),
             tooltip: '导出此案例为 JSON 文件',
             onPressed: _exportThisCase,
@@ -331,6 +364,24 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
             Text(r.structureSummary,
                 style: const TextStyle(fontSize: 12, height: 1.6)),
             const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _openChart(r),
+                  icon: const Icon(Icons.grid_view_outlined, size: 16),
+                  label: const Text('打开命盘'),
+                ),
+                if (_scopeReachable(r))
+                  OutlinedButton.icon(
+                    onPressed: () => _openScope(r),
+                    icon: const Icon(Icons.chat_outlined, size: 16),
+                    label: Text('继续问「${_shortScope(r.scopeLabel)}」'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(
               '记录于 ${_fmt(r.createdAt)}｜推演引擎 v${r.engineVersion}'
               '${rate == null ? '' : '｜应验率 ${(rate * 100).round()}%'}',
@@ -347,6 +398,18 @@ class _CaseDetailPageState extends ConsumerState<CaseDetailPage> {
         ),
       ),
     );
+  }
+
+  /// 整体命局 / 大运 / 流年 scopes can be reopened; 流月/流日 cannot yet.
+  static bool _scopeReachable(CaseRecord r) =>
+      r.scopeLabel.startsWith('整体命局') ||
+      r.scopeLabel.startsWith('大运') ||
+      r.scopeLabel.startsWith('流年');
+
+  /// 大运 庚寅（21-30岁） → 大运 庚寅, so the button stays short on a phone.
+  static String _shortScope(String label) {
+    final i = label.indexOf('（');
+    return i > 0 ? label.substring(0, i) : label;
   }
 
   /// The question/answer body of a 问答 claim.
