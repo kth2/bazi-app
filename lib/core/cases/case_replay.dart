@@ -13,23 +13,19 @@ import 'case_record.dart';
 class CaseReplay {
   CaseReplay._();
 
-  /// Null for 流月/流日 scopes, which A/B questions are not asked at, and for
-  /// a scope label the current chart cannot place.
-  static ReasoningReport? rebuild(CaseRecord record, List<Rule> rules) {
-    final chart = ChartService.compute(record.input);
-    final label = record.scopeLabel;
-
-    if (label.startsWith('整体命局')) {
-      return ReasoningReport.build(chart, rules);
-    }
+  /// The 大运/流年 a saved scope label points at, on [chart].
+  ///
+  /// `(decade: null, year: null)` for 整体命局. Null for 流月/流日 (not
+  /// rebuilt here) and for a label the chart cannot place.
+  static ({DecadeData? decade, FlowYearData? year})? scopeOf(
+      ChartResult chart, String label) {
+    if (label.startsWith('整体命局')) return (decade: null, year: null);
 
     final decadeMatch = RegExp(r'^大运\s*(\S{2})').firstMatch(label);
     if (decadeMatch != null) {
       final gz = decadeMatch.group(1)!;
       final decade = chart.decades.where((d) => d.ganZhi == gz).firstOrNull;
-      return decade == null
-          ? null
-          : ReasoningReport.build(chart, rules, decade: decade);
+      return decade == null ? null : (decade: decade, year: null);
     }
 
     final yearMatch = RegExp(r'^流年\s*(\d{4})').firstMatch(label);
@@ -39,17 +35,21 @@ class CaseReplay {
         final year = ChartService.flowYearsOf(chart, decade)
             .where((f) => f.year == y)
             .firstOrNull;
-        if (year != null) {
-          return ReasoningReport.build(chart, rules,
-              decade: decade, year: year);
-        }
+        if (year != null) return (decade: decade, year: year);
       }
-      final FlowYearData? pre =
-          chart.preDaYunYears.where((f) => f.year == y).firstOrNull;
-      return pre == null
-          ? null
-          : ReasoningReport.build(chart, rules, year: pre);
+      final pre = chart.preDaYunYears.where((f) => f.year == y).firstOrNull;
+      return pre == null ? null : (decade: null, year: pre);
     }
     return null;
+  }
+
+  /// Null for 流月/流日 scopes, which A/B questions are not asked at, and for
+  /// a scope label the current chart cannot place.
+  static ReasoningReport? rebuild(CaseRecord record, List<Rule> rules) {
+    final chart = ChartService.compute(record.input);
+    final scope = scopeOf(chart, record.scopeLabel);
+    if (scope == null) return null;
+    return ReasoningReport.build(chart, rules,
+        decade: scope.decade, year: scope.year);
   }
 }

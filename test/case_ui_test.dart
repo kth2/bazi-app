@@ -3,12 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:bazi_app/core/cases/case_record.dart';
+import 'package:bazi_app/core/cases/case_replay.dart';
 import 'package:bazi_app/core/cases/choice_question.dart';
 import 'package:bazi_app/core/cases/cases_db.dart';
+import 'package:bazi_app/core/engine/chart_service.dart';
 import 'package:bazi_app/core/models/birth_input.dart';
 import 'package:bazi_app/features/cases/case_detail_page.dart';
 import 'package:bazi_app/features/cases/case_list_page.dart';
+import 'package:bazi_app/features/chart/chart_page.dart';
+import 'package:bazi_app/providers/birth_input_provider.dart';
 import 'package:bazi_app/providers/case_provider.dart';
+import 'package:bazi_app/providers/chart_provider.dart';
 
 /// Widget tests override [caseListProvider] rather than injecting a real
 /// database: drift's connection does asynchronous work that never completes
@@ -134,6 +139,10 @@ void main() {
 
     testWidgets('claims are grouped, and the guardrail is stated to the user',
         (tester) async {
+      // Tall enough that the lazy list builds every group without scrolling.
+      tester.view.physicalSize = const Size(400 * 3, 1600 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
       final store = FakeCaseStore([
         record(claims: const [
           PredictedClaim(
@@ -240,6 +249,50 @@ void main() {
       await tester.tap(find.text('较平一项'));
       await tester.pump();
       expect(find.text('AI 所选（自动识别）'), findsOneWidget);
+    });
+
+    testWidgets('a case opens straight back into 排盘 with its birth data',
+        (tester) async {
+      tester.view.physicalSize = const Size(320 * 3, 1800 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      final store = FakeCaseStore([record()]);
+      await tester.pumpWidget(wrapDetail(store));
+      await tester.pump();
+
+      // The case's own scope can be reopened for more questions too.
+      expect(find.text('继续问「流年 2026 丙午」'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('打开命盘'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ChartPage), findsOneWidget);
+      final container =
+          ProviderScope.containerOf(tester.element(find.byType(ChartPage)));
+      expect(container.read(birthInputProvider), _input);
+      expect(container.read(chartResultProvider)!.baziString,
+          ChartService.compute(_input).baziString);
+    });
+
+    test('a saved scope label resolves to the same 大运/流年 on the chart', () {
+      final chart = ChartService.compute(_input);
+      final year = CaseReplay.scopeOf(chart, '流年 2026 丙午')!;
+      expect(year.year!.year, 2026);
+      expect(year.year!.ganZhi, '丙午');
+      expect(year.decade, isNotNull);
+
+      final d = chart.decades[2];
+      final decade = CaseReplay.scopeOf(
+          chart, '大运 ${d.ganZhi}（${d.startAge}-${d.endAge}岁）')!;
+      expect(decade.decade!.ganZhi, d.ganZhi);
+      expect(decade.year, isNull);
+
+      final natal = CaseReplay.scopeOf(chart, '整体命局')!;
+      expect(natal.decade, isNull);
+      expect(natal.year, isNull);
+
+      expect(CaseReplay.scopeOf(chart, '流月 2026 甲午月'), isNull);
     });
 
     testWidgets('a long answer collapses behind 展开全文', (tester) async {
